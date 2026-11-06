@@ -49,6 +49,8 @@ const friendActionsId = ref<string | null>(null)
 const friendSwipe = ref<{ id: string; offset: number } | null>(null)
 const blockedUsers = ref<ImContact[]>((props.init.blocked || []).map(contact => ({ ...contact })))
 const draft = ref('')
+const pendingImages = ref<{ file: File; url: string }[]>([])
+const imageSending = ref(false)
 const sign = ref(props.init.user.sign || '')
 const savedSign = ref(sign.value)
 const username = ref(props.init.user.username)
@@ -270,6 +272,7 @@ watch([activeKey, chatOpen, pageVisible, activeMessages], markViewedMessages, { 
 watch(draft, value => { if (!value.trim()) stopTyping() })
 watch([activeKey, chatOpen, pageVisible, composerRestriction], stopTyping, { flush: 'sync' })
 watch(activeKey, () => {
+  clearPendingImages()
   if (!managementBusy.value && ['members', 'invite', 'leave-group', 'remove-member', 'dismiss-group', 'rename-group'].includes(utility.value || '')) utility.value = null
 })
 watch(() => props.toolbar, () => { toolbarOverrides.value = null }, { deep: true, flush: 'sync' })
@@ -317,6 +320,7 @@ onMounted(() => {
   } catch { /* Storage may be unavailable. */ }
 })
 onUnmounted(() => {
+  clearPendingImages()
   stopTyping()
   disposed = true
   messageAlertAnimation?.cancel()
@@ -1447,16 +1451,42 @@ function setChatStatus(status: string, receiver?: { id: ImId; type: ImChatType }
   if (key) chatStatus[key] = status
 }
 
-function send(): void {
+async function send(): Promise<void> {
   const content = draft.value.trim()
   const receiver = active.value
-  if (!content || !receiver || messageRestriction(receiver) || voiceState.value !== 'idle') return
+  const images = pendingImages.value
+  if ((!content && !images.length) || !receiver || messageRestriction(receiver) || voiceState.value !== 'idle' || imageSending.value) return
+  let attachment: ImAttachment | undefined
+  let attachments: ImAttachment[] | undefined
+  if (images.length) {
+    toolbarError.value = ''
+    if (!props.uploadAttachment) { toolbarError.value = new LocaleError('uploadAttachmentRequired'); return }
+    imageSending.value = true
+    try {
+      const uploaded: ImAttachment[] = []
+      for (const image of images) {
+        const url = safeAttachmentUrl(await props.uploadAttachment(image.file, receiver))
+        if (!url) throw new Error('Invalid attachment URL')
+        if (disposed || active.value !== receiver || pendingImages.value !== images || messageRestriction(receiver)) return
+        uploaded.push({ kind: 'image', url, name: image.file.name })
+      }
+      if (uploaded.length === 1) attachment = uploaded[0]
+      else attachments = uploaded
+    } catch {
+      toolbarError.value = new LocaleError('uploadFailed')
+      return
+    } finally {
+      imageSending.value = false
+    }
+  }
+  const messageContent = content || images[0]?.file.name || ''
   const timestamp = Date.now()
   const mid = createUuid()
-  getMessage({ id: receiver.id, type: receiver.type, content, mid, username: username.value, avatar: userAvatar.value, timestamp, fromid: props.init.user.id, mine: true })
+  getMessage({ id: receiver.id, type: receiver.type, content: messageContent, ...(attachment ? { attachment } : {}), ...(attachments ? { attachments } : {}), mid, username: username.value, avatar: userAvatar.value, timestamp, fromid: props.init.user.id, mine: true })
   draft.value = ''
+  clearPendingImages()
   if (receiver.type === 'ai') startAIReply(receiver)
-  emit('sendMessage', { user: currentUser.value, receiver, content, timestamp, mid })
+  emit('sendMessage', { user: currentUser.value, receiver, content: messageContent, ...(attachment ? { attachment } : {}), ...(attachments ? { attachments } : {}), timestamp, mid })
 }
 
 function onComposerKeydown(event: KeyboardEvent): void {
@@ -1512,6 +1542,30 @@ function safeAttachmentUrl(url: string): string {
   try {
     return ['http:', 'https:', 'blob:'].includes(new URL(url, typeof location === 'undefined' ? 'http://localhost' : location.href).protocol) ? url : ''
   } catch { return '' }
+}
+
+function clearPendingImages(): void {
+  for (const image of pendingImages.value) URL.revokeObjectURL(image.url)
+  pendingImages.value = []
+}
+
+function removePendingImage(index: number): void {
+  const image = pendingImages.value[index]
+  if (!image) return
+  URL.revokeObjectURL(image.url)
+  pendingImages.value = pendingImages.value.filter((_, position) => position !== index)
+}
+
+function onComposerImage(event: Event): void {
+  const input = event.target as HTMLInputElement
+  const files = event.type === 'paste'
+    ? Array.from((event as ClipboardEvent).clipboardData?.items ?? []).filter(item => item.kind === 'file' && item.type.startsWith('image/')).map(item => item.getAsFile()).filter((file): file is File => file !== null)
+    : Array.from(input.files ?? []).filter(file => file.type.startsWith('image/'))
+  if (event.type !== 'paste') input.value = ''
+  if (!files.length || composerRestriction.value || imageSending.value) return
+  if (event.type === 'paste') event.preventDefault()
+  pendingImages.value = [...pendingImages.value, ...files.map(file => ({ file: file.name ? file : new File([file], `image.${file.type.split('/')[1] || 'png'}`, { type: file.type }), url: URL.createObjectURL(file) }))]
+  toolbarError.value = ''
 }
 
 async function sendAttachment(event: Event, kind: ImAttachment['kind']): Promise<void> {
@@ -1647,6 +1701,6 @@ function timeLabel(timestamp: number): string {
 
   return {
     api: { setContacts, setUser, updateContact, setGroupMembers, chat, getMessage, getChatNotice, setMessageRead, setTyping, addContacts, addFriendGroup, moveFriend, removeFriend, deleteFriend, blockFriend, unblockFriend, setFriendBlocked, setBlockedUsers, getBlockedUsers, removeGroup, setGroupMute, setGroupAdmin, getNotice, setFriendStatus, setChatStatus, setToolbar, open, close, resetWindows, setLocale },
-    context: { props, locale, t, setLocale, errorText, timeFormatter, voiceState, voiceDuration, voicePreview, voiceFile, voiceError, startVoice, stopVoice, cancelVoice, defaultAvatar, aiAvatar, panelOpen, chatOpen, pageVisible, playMessageSound, messageAlert, messageAlertVersion, messageAlertAnimation, tab, search, searchOpen, searchInput, collapsedGroups, draggedFriend, friendDropTarget, friendMoveBusy, friendMoveError, friendDragClick, friendActionsId, friendSwipe, blockedUsers, draft, sign, savedSign, username, usernameDraft, userAvatar, avatarInput, avatarBusy, avatarError, avatarRequest, online, currentUser, activeKey, openKeys, recentKeys, conversations, messages, aiPending, aiTimers, markdown, unread, friendStatus, chatStatus, readReceipts, readNotified, typingStates, typingTimers, localTyping, typingIdleTimer, lastTypingSentAt, historyError, loadedHistory, messageList, panelElement, chatElement, panelPosition, chatPosition, frontWindow, utility, managementBusy, managementError, newFriendGroupName, creatingFriendGroup, selectedGroupId, managedFriend, pendingNotice, managedGroup, managedMember, newGroupName, groupAvatarInput, memberQuery, selectedMemberIds, groupMembers, groupMuteStates, groupMemberMuteStates, groupMembersBusy, groupMembersError, findQuery, findResults, findBusy, findError, addBusy, requestedIds, notices, theme, sendKey, emojiOpen, toolbarError, toolbarOverrides, toolbarBusy, toolbarSession, callBusy, voiceSending, imageInput, fileInput, emojis, stopDrag, stopFriendDrag, localBackup, backupUserId, backupMounted, disposed, keyOf, contactSnapshot, friends, addedGroups, removedFriendIds, removedGroupIds, groupMemberCounts, groupProfiles, groups, active, composerRestriction, toolbarState, toolbarItems, activeMessages, typingLabel, totalUnread, unreadContacts, notificationUnread, unreadNotices, addedFriends, addedFriendGroups, friendGroupAssignments, friendGroups, utilityTitle, selectableFriends, existingMemberIds, managedGroupKey, query, visibleGroups, visibleChats, visibleRecent, backupSnapshot, saveBackup, configureBackup, displayName, avatarLetter, isOffline, toggleSearch, toggleGroup, scrollToBottom, normalise, remember, ensureConversation, fetchHistory, chat, updatePageVisibility, isConversationVisible, isConversationOpen, markUnread, openUnreadMessages, open, close, resetWindows, windowStyle, adjustDraggedChatWidth, startDrag, addContacts, addFriendGroup, setUser, setContacts, updateContact, setGroupMembers, moveFriend, removeConversation, removeFriend, isBlocked, isBlockedContact, isBlockedMessage, getBlockedUsers, setFriendBlocked, setBlockedUsers, changeFriend, deleteFriend, blockFriend, unblockFriend, confirmFriendAction, submitFriendAction, removeGroup, getNotice, openUtility, fetchGroupMembers, updateMemberCount, groupInfo, applyGroupProfile, saveGroupProfile, isGroupOwner, isGroupAdmin, canManageGroup, canManageMember, setGroupAdmin, assertGroupManagement, isGroupMuted, isMemberMuted, setGroupMute, messageRestriction, moderateGroup, startFriendDrag, dropFriend, saveFriendGroup, submitFriendManagement, submitGroupManagement, runFind, requestAdd, actOnNotice, saveSettings, closeChat, getMessage, finishAIReply, waitForAI, startAIReply, receiveAIMessage, getChatNotice, chatNoticeText, setMessageRead, markViewedMessages, setTyping, publishTyping, stopTyping, setFriendStatus, setChatStatus, send, onComposerKeydown, insertEmoji, setToolbar, runToolbar, safeAttachmentUrl, sendAttachment, requestCall, sendVoice, updateOnline, updateSign, updateUsername, readAvatar, updateAvatar, timeLabel },
+    context: { props, locale, t, setLocale, errorText, timeFormatter, voiceState, voiceDuration, voicePreview, voiceFile, voiceError, startVoice, stopVoice, cancelVoice, defaultAvatar, aiAvatar, panelOpen, chatOpen, pageVisible, playMessageSound, messageAlert, messageAlertVersion, messageAlertAnimation, tab, search, searchOpen, searchInput, collapsedGroups, draggedFriend, friendDropTarget, friendMoveBusy, friendMoveError, friendDragClick, friendActionsId, friendSwipe, blockedUsers, draft, pendingImages, imageSending, sign, savedSign, username, usernameDraft, userAvatar, avatarInput, avatarBusy, avatarError, avatarRequest, online, currentUser, activeKey, openKeys, recentKeys, conversations, messages, aiPending, aiTimers, markdown, unread, friendStatus, chatStatus, readReceipts, readNotified, typingStates, typingTimers, localTyping, typingIdleTimer, lastTypingSentAt, historyError, loadedHistory, messageList, panelElement, chatElement, panelPosition, chatPosition, frontWindow, utility, managementBusy, managementError, newFriendGroupName, creatingFriendGroup, selectedGroupId, managedFriend, pendingNotice, managedGroup, managedMember, newGroupName, groupAvatarInput, memberQuery, selectedMemberIds, groupMembers, groupMuteStates, groupMemberMuteStates, groupMembersBusy, groupMembersError, findQuery, findResults, findBusy, findError, addBusy, requestedIds, notices, theme, sendKey, emojiOpen, toolbarError, toolbarOverrides, toolbarBusy, toolbarSession, callBusy, voiceSending, imageInput, fileInput, emojis, stopDrag, stopFriendDrag, localBackup, backupUserId, backupMounted, disposed, keyOf, contactSnapshot, friends, addedGroups, removedFriendIds, removedGroupIds, groupMemberCounts, groupProfiles, groups, active, composerRestriction, toolbarState, toolbarItems, activeMessages, typingLabel, totalUnread, unreadContacts, notificationUnread, unreadNotices, addedFriends, addedFriendGroups, friendGroupAssignments, friendGroups, utilityTitle, selectableFriends, existingMemberIds, managedGroupKey, query, visibleGroups, visibleChats, visibleRecent, backupSnapshot, saveBackup, configureBackup, displayName, avatarLetter, isOffline, toggleSearch, toggleGroup, scrollToBottom, normalise, remember, ensureConversation, fetchHistory, chat, updatePageVisibility, isConversationVisible, isConversationOpen, markUnread, openUnreadMessages, open, close, resetWindows, windowStyle, adjustDraggedChatWidth, startDrag, addContacts, addFriendGroup, setUser, setContacts, updateContact, setGroupMembers, moveFriend, removeConversation, removeFriend, isBlocked, isBlockedContact, isBlockedMessage, getBlockedUsers, setFriendBlocked, setBlockedUsers, changeFriend, deleteFriend, blockFriend, unblockFriend, confirmFriendAction, submitFriendAction, removeGroup, getNotice, openUtility, fetchGroupMembers, updateMemberCount, groupInfo, applyGroupProfile, saveGroupProfile, isGroupOwner, isGroupAdmin, canManageGroup, canManageMember, setGroupAdmin, assertGroupManagement, isGroupMuted, isMemberMuted, setGroupMute, messageRestriction, moderateGroup, startFriendDrag, dropFriend, saveFriendGroup, submitFriendManagement, submitGroupManagement, runFind, requestAdd, actOnNotice, saveSettings, closeChat, getMessage, finishAIReply, waitForAI, startAIReply, receiveAIMessage, getChatNotice, chatNoticeText, setMessageRead, markViewedMessages, setTyping, publishTyping, stopTyping, setFriendStatus, setChatStatus, send, onComposerKeydown, insertEmoji, setToolbar, runToolbar, safeAttachmentUrl, clearPendingImages, removePendingImage, onComposerImage, sendAttachment, requestCall, sendVoice, updateOnline, updateSign, updateUsername, readAvatar, updateAvatar, timeLabel },
   }
 }

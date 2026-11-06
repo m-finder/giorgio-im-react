@@ -1,6 +1,6 @@
 {
   "name": "@m-finder/giorgio-im-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A drop-in React instant messaging widget",
   "license": "MIT",
   "publishConfig": {
