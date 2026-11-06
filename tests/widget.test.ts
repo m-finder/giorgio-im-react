@@ -24,6 +24,7 @@ afterEach(async () => {
   await act(async () => { for (const im of instances.splice(0)) im.destroy() })
   document.body.replaceChildren()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('React IM widget', () => {
@@ -41,6 +42,76 @@ describe('React IM widget', () => {
     await act(async () => { target.querySelector<HTMLButtonElement>('.gim-composer-footer button')!.click() })
     expect(onSendMessage).toHaveBeenCalledWith(expect.objectContaining({ content: '你好', receiver: expect.objectContaining({ id: 'alice' }) }))
     expect(target.querySelector('.gim-bubble')?.textContent).toBe('你好')
+  })
+
+  it('stages a toolbar image and sends it with text as one message', async () => {
+    vi.stubGlobal('URL', class extends URL { static createObjectURL = vi.fn(() => 'blob:chosen-image'); static revokeObjectURL = vi.fn() })
+    const uploadAttachment = vi.fn(() => 'https://example.test/photo.png')
+    const onSendMessage = vi.fn()
+    const { im, target } = mount({ uploadAttachment, onSendMessage })
+    await act(async () => { im.chat({ id: 'alice', type: 'friend', username: 'Alice' }) })
+    const input = target.querySelector<HTMLInputElement>('input[type="file"][accept="image/*"]')!
+    const image = new File(['image'], 'photo.png', { type: 'image/png' })
+    Object.defineProperty(input, 'files', { configurable: true, value: [image] })
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })) })
+    expect(target.querySelector<HTMLImageElement>('.gim-image-preview img')?.src).toBe('blob:chosen-image')
+    expect(uploadAttachment).not.toHaveBeenCalled()
+    const composer = target.querySelector<HTMLTextAreaElement>('textarea')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(composer, '这张照片')
+      composer.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => { target.querySelector<HTMLButtonElement>('.gim-composer-footer button')!.click() })
+    expect(uploadAttachment).toHaveBeenCalledWith(image, expect.objectContaining({ id: 'alice' }))
+    expect(onSendMessage).toHaveBeenCalledWith(expect.objectContaining({ content: '这张照片', attachment: { kind: 'image', url: 'https://example.test/photo.png', name: 'photo.png' } }))
+    expect(target.querySelector('.gim-bubble')?.textContent).toBe('这张照片')
+  })
+
+  it('stages a pasted image before sending it with text', async () => {
+    vi.stubGlobal('URL', class extends URL { static createObjectURL = vi.fn(() => 'blob:pasted-image'); static revokeObjectURL = vi.fn() })
+    const uploadAttachment = vi.fn(() => 'https://example.test/pasted.png')
+    const onSendMessage = vi.fn()
+    const { im, target } = mount({ uploadAttachment, onSendMessage })
+    await act(async () => { im.chat({ id: 'alice', type: 'friend', username: 'Alice' }) })
+    const composer = target.querySelector<HTMLTextAreaElement>('textarea')!
+    const image = new File(['image'], 'pasted.png', { type: 'image/png' })
+    const event = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'clipboardData', { value: { items: [{ kind: 'file', type: 'image/png', getAsFile: () => image }] } })
+    await act(async () => { composer.dispatchEvent(event) })
+    expect(event.defaultPrevented).toBe(true)
+    expect(target.querySelector<HTMLImageElement>('.gim-image-preview img')?.src).toBe('blob:pasted-image')
+    expect(uploadAttachment).not.toHaveBeenCalled()
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(composer, '请看')
+      composer.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => { target.querySelector<HTMLButtonElement>('.gim-composer-footer button')!.click() })
+    expect(onSendMessage).toHaveBeenCalledWith(expect.objectContaining({ content: '请看', attachment: expect.objectContaining({ kind: 'image', url: 'https://example.test/pasted.png' }) }))
+  })
+
+  it('accumulates selected and pasted images, then sends one message', async () => {
+    vi.stubGlobal('URL', class extends URL { static createObjectURL = vi.fn((file: File) => `blob:${file.name}`); static revokeObjectURL = vi.fn() })
+    const uploadAttachment = vi.fn((file: File) => `https://example.test/${file.name}`)
+    const onSendMessage = vi.fn()
+    const { im, target } = mount({ uploadAttachment, onSendMessage })
+    await act(async () => { im.chat({ id: 'alice', type: 'friend', username: 'Alice' }) })
+    const input = target.querySelector<HTMLInputElement>('input[type="file"][accept="image/*"]')!
+    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['a'], 'a.png', { type: 'image/png' }), new File(['b'], 'b.png', { type: 'image/png' })] })
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })) })
+    const paste = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(paste, 'clipboardData', { value: { items: [{ kind: 'file', type: 'image/png', getAsFile: () => new File(['c'], 'c.png', { type: 'image/png' }) }] } })
+    await act(async () => { target.querySelector('textarea')!.dispatchEvent(paste) })
+    expect(Array.from(target.querySelectorAll('.gim-image-preview img'), image => image.getAttribute('alt'))).toEqual(['a.png', 'b.png', 'c.png'])
+    await act(async () => { target.querySelectorAll<HTMLButtonElement>('[aria-label="移除图片"]')[1].click() })
+    const composer = target.querySelector<HTMLTextAreaElement>('textarea')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(composer, '两张图片')
+      composer.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => { target.querySelector<HTMLButtonElement>('.gim-composer-footer button')!.click() })
+    expect(uploadAttachment.mock.calls.map(([file]) => file.name)).toEqual(['a.png', 'c.png'])
+    expect(onSendMessage).toHaveBeenCalledWith(expect.objectContaining({ content: '两张图片', attachments: expect.arrayContaining([expect.objectContaining({ name: 'a.png' }), expect.objectContaining({ name: 'c.png' })]) }))
+    expect(target.querySelectorAll('.gim-bubble img')).toHaveLength(2)
   })
 
   it('counts unread messages and clears them when their chat opens', async () => {

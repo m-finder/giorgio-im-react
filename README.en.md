@@ -82,6 +82,8 @@ im.open()
 
 - Contacts, friend categories, groups, recent chats, notifications, draggable windows and customer service mode
 - Text, images, files, voice, emoji, streaming AI Markdown replies and configurable toolbar
+- Preview pasted or toolbar-selected images in the composer, then send one message with optional text
+- Add and remove individual images before sending; messages with multiple images use an `attachments` array
 - Read receipts, typing and presence, blocking, group moderation and localisation
 - Optional AES-256-GCM encrypted local backup, disabled by default
 - The same `ImWidgetApi`, `ImOptions`, message types and callback signatures as the Vue package
