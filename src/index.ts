@@ -14,7 +14,7 @@ export { zhCN, en } from './locales'
 export type { ImLocaleKey, ImLocaleMessages, ImLocaleParams, ImLocales } from './locales'
 export type {
   ImId, ImChatType, ImUser, ImContact, ImGroupMember, ImFriendGroup, ImInit,
-  ImMessage, ImChatNotice, ImReadPayload, ImReadReceipt, ImTypingPayload, ImTypingState,
+  ImMessage, ImMention, ImMessageReference, ImChatNotice, ImReadPayload, ImReadReceipt, ImTypingPayload, ImTypingState,
   ImAttachment, ImSendPayload, ImNotice, ImCreateGroupPayload, ImWidgetApi, ImOptions,
   ImBuiltinTool, ImToolbarState, ImToolbarContext, ImToolbarItem,
   ImCallType, ImCallPayload,

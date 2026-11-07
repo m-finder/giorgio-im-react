@@ -16,7 +16,7 @@ const body = script.slice(script.indexOf('const { locale,'), script.indexOf('def
   .replace('useVoiceRecorder()', 'useVoiceRecorder(store)')
   .replace('onMounted(() => {\n  ensureStyles()', 'onMounted(() => {\n  disposed = false\n  ensureStyles()')
 const names = [...new Set([...body.matchAll(/^(?:const|let|function|async function)\s+([A-Za-z]\w*)/gm)].map(match => match[1]))]
-const extras = ['props', 'locale', 't', 'setLocale', 'errorText', 'timeFormatter', 'voiceState', 'voiceDuration', 'voicePreview', 'voiceFile', 'voiceError', 'startVoice', 'stopVoice', 'cancelVoice', 'defaultAvatar', 'aiAvatar']
+const extras = ['props', 'locale', 't', 'setLocale', 'errorText', 'timeFormatter', 'voiceState', 'voiceDuration', 'voicePreview', 'voiceFile', 'voiceError', 'startVoice', 'stopVoice', 'cancelVoice', 'defaultAvatar', 'aiAvatar', 'messageParts', 'quoteImages', 'quoteText']
 const api = source.match(/defineExpose\(\{([^}]+)\}\)/)?.[1]
 if (!api) throw new Error('Missing public API')
 const model = `${beforeProps}

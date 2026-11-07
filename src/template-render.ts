@@ -361,36 +361,84 @@ export function render(_ctx, _cache) {
               : (_ctx.tab === 'group')
                 ? (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [
                     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.visibleChats, (contact) => {
-                      return (_openBlock(), _createElementBlock("button", {
+                      return (_openBlock(), _createElementBlock("div", {
                         key: contact.id,
-                        class: "gim-contact",
-                        type: "button",
-                        onClick: $event => (_ctx.chat(contact))
+                        class: _normalizeClass(["gim-contact-row gim-group-row", { 'gim-actions-open': _ctx.groupActionsId === String(contact.id), 'gim-swiping': _ctx.groupSwipe?.id === String(contact.id) }])
                       }, [
-                        _createElementVNode("span", { class: "gim-avatar gim-group-avatar" }, [
-                          (contact.avatar)
-                            ? (_openBlock(), _createElementBlock("img", {
+                        _createElementVNode("div", {
+                          class: "gim-group-actions",
+                          inert: _ctx.groupActionsId !== String(contact.id)
+                        }, [
+                          _createElementVNode("button", {
+                            type: "button",
+                            "aria-label": _ctx.isGroupNotificationsMuted(contact) ? _ctx.t('unmuteNamedGroupNotifications', { name: _ctx.displayName(contact) }) : _ctx.t('muteNamedGroupNotifications', { name: _ctx.displayName(contact) }),
+                            disabled: _ctx.groupNotificationBusy.has(String(contact.id)),
+                            onClick: $event => (_ctx.toggleGroupNotifications(contact))
+                          }, _toDisplayString(_ctx.isGroupNotificationsMuted(contact) ? _ctx.t('unmuteNotifications') : _ctx.t('muteNotifications')), 9 /* TEXT, PROPS */, ["aria-label", "disabled", "onClick"])
+                        ], 8 /* PROPS */, ["inert"]),
+                        _createElementVNode("button", {
+                          class: "gim-contact",
+                          type: "button",
+                          style: _normalizeStyle(_ctx.groupSwipe?.id === String(contact.id) ? { transform: `translateX(${_ctx.groupSwipe.offset}px)` } : undefined),
+                          draggable: false,
+                          title: _ctx.t('swipeGroupHint'),
+                          onContextmenu: _withModifiers($event => (_ctx.groupActionsId = _ctx.groupActionsId === String(contact.id) ? null : String(contact.id)), ["prevent"]),
+                          onKeydown: [
+                            _withKeys(_withModifiers($event => (_ctx.groupActionsId = String(contact.id)), ["shift","prevent"]), ["f10"]),
+                            _withKeys($event => (_ctx.groupActionsId = null), ["esc"])
+                          ],
+                          onPointerdown: $event => (_ctx.startGroupSwipe($event, contact)),
+                          onClick: $event => (!_ctx.groupSwipeClick && _ctx.chat(contact))
+                        }, [
+                          _createElementVNode("span", { class: "gim-avatar gim-group-avatar" }, [
+                            (contact.avatar)
+                              ? (_openBlock(), _createElementBlock("img", {
+                                  key: 0,
+                                  src: contact.avatar,
+                                  alt: _ctx.displayName(contact),
+                                  draggable: false
+                                }, null, 8 /* PROPS */, ["src", "alt"]))
+                              : (_openBlock(), _createElementBlock("span", { key: 1 }, _toDisplayString(_ctx.avatarLetter(contact)), 1 /* TEXT */))
+                          ]),
+                          _createElementVNode("span", { class: "gim-contact-copy" }, [
+                            _createElementVNode("strong", null, _toDisplayString(_ctx.displayName(contact)), 1 /* TEXT */),
+                            _createElementVNode("small", null, _toDisplayString(contact.members !== undefined ? _ctx.t('memberCount', { count: contact.members }) : _ctx.t('groupChat')), 1 /* TEXT */)
+                          ]),
+                          (_ctx.isGroupNotificationsMuted(contact))
+                            ? (_openBlock(), _createElementBlock("span", {
                                 key: 0,
-                                src: contact.avatar,
-                                alt: _ctx.displayName(contact)
-                              }, null, 8 /* PROPS */, ["src", "alt"]))
-                            : (_openBlock(), _createElementBlock("span", { key: 1 }, _toDisplayString(_ctx.avatarLetter(contact)), 1 /* TEXT */))
-                        ]),
-                        _createElementVNode("span", { class: "gim-contact-copy" }, [
-                          _createElementVNode("strong", null, _toDisplayString(_ctx.displayName(contact)), 1 /* TEXT */),
-                          _createElementVNode("small", null, _toDisplayString(contact.members !== undefined ? _ctx.t('memberCount', { count: contact.members }) : _ctx.t('groupChat')), 1 /* TEXT */)
-                        ]),
-                        (_ctx.unread[`group:${contact.id}`])
-                          ? (_openBlock(), _createElementBlock("span", {
-                              key: 0,
-                              class: "gim-unread"
-                            }, _toDisplayString(_ctx.unread[`group:${contact.id}`]), 1 /* TEXT */))
-                          : _createCommentVNode("v-if", true)
-                      ], 8 /* PROPS */, ["onClick"]))
+                                class: "gim-group-notifications-muted",
+                                role: "img",
+                                "aria-label": _ctx.t('groupNotificationsMuted'),
+                                title: _ctx.t('groupNotificationsMuted')
+                              }, [
+                                (_openBlock(), _createElementBlock("svg", {
+                                  viewBox: "0 0 24 24",
+                                  "aria-hidden": "true"
+                                }, [
+                                  _createElementVNode("path", { d: "m3 3 18 18M10.6 4.2A6 6 0 0 1 18 10v2M6 6.5A6 6 0 0 0 6 10c0 5-3 5-3 7h14M10 21h4" })
+                                ]))
+                              ], 8 /* PROPS */, ["aria-label", "title"]))
+                            : _createCommentVNode("v-if", true),
+                          (_ctx.unread[`group:${contact.id}`])
+                            ? (_openBlock(), _createElementBlock("span", {
+                                key: 1,
+                                class: "gim-unread"
+                              }, _toDisplayString(_ctx.unread[`group:${contact.id}`]), 1 /* TEXT */))
+                            : _createCommentVNode("v-if", true)
+                        ], 44 /* STYLE, PROPS, NEED_HYDRATION */, ["title", "onContextmenu", "onKeydown", "onPointerdown", "onClick"])
+                      ], 2 /* CLASS */))
                     }), 128 /* KEYED_FRAGMENT */)),
-                    (!_ctx.visibleChats.length)
+                    (_ctx.groupNotificationError)
                       ? (_openBlock(), _createElementBlock("p", {
                           key: 0,
+                          class: "gim-form-error",
+                          role: "alert"
+                        }, _toDisplayString(_ctx.errorText(_ctx.groupNotificationError)), 1 /* TEXT */))
+                      : _createCommentVNode("v-if", true),
+                    (!_ctx.visibleChats.length)
+                      ? (_openBlock(), _createElementBlock("p", {
+                          key: 1,
                           class: "gim-empty"
                         }, _toDisplayString(_ctx.t('noGroups')), 1 /* TEXT */))
                       : _createCommentVNode("v-if", true)
@@ -426,9 +474,25 @@ export function render(_ctx, _cache) {
                           ]),
                           _createElementVNode("small", null, _toDisplayString(_ctx.messages[key]?.filter(message => !message.notice).at(-1)?.content || (_ctx.conversations[key].type === 'group' ? _ctx.t('groupChat') : _ctx.t('startChat'))), 1 /* TEXT */)
                         ]),
-                        (_ctx.unread[key])
+                        (_ctx.isGroupNotificationsMuted(_ctx.conversations[key]))
                           ? (_openBlock(), _createElementBlock("span", {
                               key: 0,
+                              class: "gim-group-notifications-muted",
+                              role: "img",
+                              "aria-label": _ctx.t('groupNotificationsMuted'),
+                              title: _ctx.t('groupNotificationsMuted')
+                            }, [
+                              (_openBlock(), _createElementBlock("svg", {
+                                viewBox: "0 0 24 24",
+                                "aria-hidden": "true"
+                              }, [
+                                _createElementVNode("path", { d: "m3 3 18 18M10.6 4.2A6 6 0 0 1 18 10v2M6 6.5A6 6 0 0 0 6 10c0 5-3 5-3 7h14M10 21h4" })
+                              ]))
+                            ], 8 /* PROPS */, ["aria-label", "title"]))
+                          : _createCommentVNode("v-if", true),
+                        (_ctx.unread[key])
+                          ? (_openBlock(), _createElementBlock("span", {
+                              key: 1,
                               class: "gim-unread"
                             }, _toDisplayString(_ctx.unread[key]), 1 /* TEXT */))
                           : _createCommentVNode("v-if", true)
@@ -565,9 +629,25 @@ export function render(_ctx, _cache) {
                               }, _toDisplayString(_ctx.t('blockedUser')), 1 /* TEXT */))
                             : _createCommentVNode("v-if", true)
                         ]),
+                        (_ctx.isGroupNotificationsMuted(_ctx.conversations[key]))
+                          ? (_openBlock(), _createElementBlock("span", {
+                              key: 0,
+                              class: "gim-group-notifications-muted",
+                              role: "img",
+                              "aria-label": _ctx.t('groupNotificationsMuted'),
+                              title: _ctx.t('groupNotificationsMuted')
+                            }, [
+                              (_openBlock(), _createElementBlock("svg", {
+                                viewBox: "0 0 24 24",
+                                "aria-hidden": "true"
+                              }, [
+                                _createElementVNode("path", { d: "m3 3 18 18M10.6 4.2A6 6 0 0 1 18 10v2M6 6.5A6 6 0 0 0 6 10c0 5-3 5-3 7h14M10 21h4" })
+                              ]))
+                            ], 8 /* PROPS */, ["aria-label", "title"]))
+                          : _createCommentVNode("v-if", true),
                         (_ctx.unread[key])
                           ? (_openBlock(), _createElementBlock("i", {
-                              key: 0,
+                              key: 1,
                               class: "gim-tab-dot"
                             }))
                           : _createCommentVNode("v-if", true)
@@ -748,20 +828,66 @@ export function render(_ctx, _cache) {
                             _createElementVNode("time", null, _toDisplayString(_ctx.timeLabel(message.timestamp)), 1 /* TEXT */)
                           ]),
                           _createElementVNode("div", { class: "gim-bubble" }, [
+                            (message.replyTo)
+                              ? (_openBlock(), _createElementBlock("blockquote", {
+                                  key: 0,
+                                  class: "gim-message-quote"
+                                }, [
+                                  _createElementVNode("strong", null, _toDisplayString(message.replyTo.username), 1 /* TEXT */),
+                                  (_ctx.quoteImages(message.replyTo).length)
+                                    ? (_openBlock(), _createElementBlock("div", {
+                                        key: 0,
+                                        class: "gim-quote-images"
+                                      }, [
+                                        (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.quoteImages(message.replyTo), (image) => {
+                                          return (_openBlock(), _createElementBlock(_Fragment, {
+                                            key: image.url
+                                          }, [
+                                            (_ctx.safeAttachmentUrl(image.url))
+                                              ? (_openBlock(), _createElementBlock("button", {
+                                                  key: 0,
+                                                  type: "button",
+                                                  class: "gim-image-button",
+                                                  "aria-label": _ctx.t('previewImage'),
+                                                  onClick: $event => (_ctx.openImagePreview(image, $event))
+                                                }, [
+                                                  _createElementVNode("img", {
+                                                    class: "gim-quote-image",
+                                                    src: image.url,
+                                                    alt: image.name
+                                                  }, null, 8 /* PROPS */, ["src", "alt"])
+                                                ], 8 /* PROPS */, ["aria-label", "onClick"]))
+                                              : _createCommentVNode("v-if", true)
+                                          ], 64 /* STABLE_FRAGMENT */))
+                                        }), 128 /* KEYED_FRAGMENT */))
+                                      ]))
+                                    : _createCommentVNode("v-if", true),
+                                  (_ctx.quoteText(message.replyTo))
+                                    ? (_openBlock(), _createElementBlock("span", { key: 1 }, _toDisplayString(_ctx.quoteText(message.replyTo)), 1 /* TEXT */))
+                                    : _createCommentVNode("v-if", true)
+                                ]))
+                              : _createCommentVNode("v-if", true),
                             (message.attachments?.length)
-                              ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+                              ? (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
                                   _createElementVNode("div", { class: "gim-message-images" }, [
                                     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(message.attachments, (image) => {
                                       return (_openBlock(), _createElementBlock(_Fragment, {
                                         key: image.url
                                       }, [
                                         (image.kind === 'image' && _ctx.safeAttachmentUrl(image.url))
-                                          ? (_openBlock(), _createElementBlock("img", {
+                                          ? (_openBlock(), _createElementBlock("button", {
                                               key: 0,
-                                              class: "gim-message-image",
-                                              src: image.url,
-                                              alt: image.name
-                                            }, null, 8 /* PROPS */, ["src", "alt"]))
+                                              type: "button",
+                                              class: "gim-image-button",
+                                              "aria-label": _ctx.t('previewImage'),
+                                              onClick: $event => (_ctx.openImagePreview(image, $event))
+                                            }, [
+                                              _createElementVNode("img", {
+                                                class: "gim-message-image",
+                                                src: image.url,
+                                                alt: image.name
+                                              }, null, 8 /* PROPS */, ["src", "alt"])
+                                            ], 8 /* PROPS */, ["aria-label", "onClick"]))
                                           : _createCommentVNode("v-if", true)
                                       ], 64 /* STABLE_FRAGMENT */))
                                     }), 128 /* KEYED_FRAGMENT */))
@@ -770,26 +896,59 @@ export function render(_ctx, _cache) {
                                     ? (_openBlock(), _createElementBlock("span", {
                                         key: 0,
                                         class: "gim-message-caption"
-                                      }, _toDisplayString(message.content), 1 /* TEXT */))
+                                      }, [
+                                        (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.messageParts(message), (part, partIndex) => {
+                                          return (_openBlock(), _createElementBlock(_Fragment, { key: partIndex }, [
+                                            (part.mention)
+                                              ? (_openBlock(), _createElementBlock("span", {
+                                                  key: 0,
+                                                  class: _normalizeClass(["gim-mention", { 'gim-mention-me': String(part.mention.id) === String(_ctx.init.user.id) }])
+                                                }, _toDisplayString(part.text), 3 /* TEXT, CLASS */))
+                                              : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+                                                  _createTextVNode(_toDisplayString(part.text), 1 /* TEXT */)
+                                                ], 64 /* STABLE_FRAGMENT */))
+                                          ], 64 /* STABLE_FRAGMENT */))
+                                        }), 128 /* KEYED_FRAGMENT */))
+                                      ]))
                                     : _createCommentVNode("v-if", true)
                                 ], 64 /* STABLE_FRAGMENT */))
                               : (message.attachment?.kind === 'image' && _ctx.safeAttachmentUrl(message.attachment.url))
-                                ? (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
-                                    _createElementVNode("img", {
-                                      class: "gim-message-image",
-                                      src: message.attachment.url,
-                                      alt: message.attachment.name
-                                    }, null, 8 /* PROPS */, ["src", "alt"]),
+                                ? (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [
+                                    _createElementVNode("button", {
+                                      type: "button",
+                                      class: "gim-image-button",
+                                      "aria-label": _ctx.t('previewImage'),
+                                      onClick: $event => (_ctx.openImagePreview(message.attachment, $event))
+                                    }, [
+                                      _createElementVNode("img", {
+                                        class: "gim-message-image",
+                                        src: message.attachment.url,
+                                        alt: message.attachment.name
+                                      }, null, 8 /* PROPS */, ["src", "alt"])
+                                    ], 8 /* PROPS */, ["aria-label", "onClick"]),
                                     (message.content && message.content !== message.attachment.name)
                                       ? (_openBlock(), _createElementBlock("span", {
                                           key: 0,
                                           class: "gim-message-caption"
-                                        }, _toDisplayString(message.content), 1 /* TEXT */))
+                                        }, [
+                                          (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.messageParts(message), (part, partIndex) => {
+                                            return (_openBlock(), _createElementBlock(_Fragment, { key: partIndex }, [
+                                              (part.mention)
+                                                ? (_openBlock(), _createElementBlock("span", {
+                                                    key: 0,
+                                                    class: _normalizeClass(["gim-mention", { 'gim-mention-me': String(part.mention.id) === String(_ctx.init.user.id) }])
+                                                  }, _toDisplayString(part.text), 3 /* TEXT, CLASS */))
+                                                : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+                                                    _createTextVNode(_toDisplayString(part.text), 1 /* TEXT */)
+                                                  ], 64 /* STABLE_FRAGMENT */))
+                                            ], 64 /* STABLE_FRAGMENT */))
+                                          }), 128 /* KEYED_FRAGMENT */))
+                                        ]))
                                       : _createCommentVNode("v-if", true)
                                   ], 64 /* STABLE_FRAGMENT */))
                                 : (message.attachment?.kind === 'audio' && _ctx.safeAttachmentUrl(message.attachment.url))
                                   ? (_openBlock(), _createElementBlock("div", {
-                                      key: 2,
+                                      key: 3,
                                       class: "gim-voice-message"
                                     }, [
                                       _createElementVNode("audio", {
@@ -804,7 +963,7 @@ export function render(_ctx, _cache) {
                                     ]))
                                   : (message.attachment?.kind === 'file' && _ctx.safeAttachmentUrl(message.attachment.url))
                                     ? (_openBlock(), _createElementBlock("a", {
-                                        key: 3,
+                                        key: 4,
                                         href: message.attachment.url,
                                         target: "_blank",
                                         rel: "noopener noreferrer",
@@ -812,16 +971,25 @@ export function render(_ctx, _cache) {
                                       }, _toDisplayString(message.attachment.name) + " ↗", 9 /* TEXT, PROPS */, ["href"]))
                                     : (_ctx.active.type === 'ai' && !message.mine && message.content)
                                       ? (_openBlock(), _createElementBlock("div", {
-                                          key: 4,
+                                          key: 5,
                                           class: "gim-markdown",
                                           innerHTML: _ctx.markdown.render(message.content)
                                         }, null, 8 /* PROPS */, ["innerHTML"]))
-                                      : (_openBlock(), _createElementBlock(_Fragment, { key: 5 }, [
-                                          _createTextVNode(_toDisplayString(message.content), 1 /* TEXT */)
-                                        ], 64 /* STABLE_FRAGMENT */)),
+                                      : (_openBlock(true), _createElementBlock(_Fragment, { key: 6 }, _renderList(_ctx.messageParts(message), (part, partIndex) => {
+                                          return (_openBlock(), _createElementBlock(_Fragment, { key: partIndex }, [
+                                            (part.mention)
+                                              ? (_openBlock(), _createElementBlock("span", {
+                                                  key: 0,
+                                                  class: _normalizeClass(["gim-mention", { 'gim-mention-me': String(part.mention.id) === String(_ctx.init.user.id) }])
+                                                }, _toDisplayString(part.text), 3 /* TEXT, CLASS */))
+                                              : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+                                                  _createTextVNode(_toDisplayString(part.text), 1 /* TEXT */)
+                                                ], 64 /* STABLE_FRAGMENT */))
+                                          ], 64 /* STABLE_FRAGMENT */))
+                                        }), 128 /* KEYED_FRAGMENT */)),
                             (message.pending)
                               ? (_openBlock(), _createElementBlock("span", {
-                                  key: 6,
+                                  key: 7,
                                   class: "gim-ai-progress",
                                   role: "status"
                                 }, [
@@ -834,15 +1002,25 @@ export function render(_ctx, _cache) {
                               : _createCommentVNode("v-if", true),
                             (message.error || message.errorKey)
                               ? (_openBlock(), _createElementBlock("span", {
-                                  key: 7,
+                                  key: 8,
                                   class: "gim-ai-error",
                                   role: "alert"
                                 }, _toDisplayString(message.errorKey ? _ctx.t(message.errorKey) : message.error), 1 /* TEXT */))
                               : _createCommentVNode("v-if", true)
                           ]),
+                          (_ctx.active.type !== 'ai' && message.mid !== undefined && (message.mine || message.fromid !== undefined || _ctx.active.type === 'friend'))
+                            ? (_openBlock(), _createElementBlock("button", {
+                                key: 0,
+                                type: "button",
+                                class: "gim-quote-action",
+                                "aria-label": _ctx.t('quoteMessage'),
+                                disabled: !!_ctx.composerRestriction || _ctx.imageSending || _ctx.voiceSending,
+                                onClick: $event => (_ctx.quoteMessage(message))
+                              }, _toDisplayString(_ctx.t('quoteMessage')), 9 /* TEXT, PROPS */, ["aria-label", "disabled", "onClick"]))
+                            : _createCommentVNode("v-if", true),
                           (message.mine && _ctx.active.type !== 'ai')
                             ? (_openBlock(), _createElementBlock("small", {
-                                key: 0,
+                                key: 1,
                                 class: _normalizeClass(["gim-read-state", { 'is-read': message.readBy?.length }])
                               }, _toDisplayString(message.readBy?.length ? _ctx.active.type === 'group' ? _ctx.t('messageReadCount', { count: message.readBy.length }) : _ctx.t('messageRead') : _ctx.t('messageUnread')), 3 /* TEXT, CLASS */))
                             : _createCommentVNode("v-if", true)
@@ -914,9 +1092,56 @@ export function render(_ctx, _cache) {
                     role: "alert"
                   }, _toDisplayString(_ctx.errorText(_ctx.toolbarError)), 1 /* TEXT */))
                 : _createCommentVNode("v-if", true),
-              (_ctx.voiceState !== 'idle')
+              (_ctx.replyTo)
                 ? (_openBlock(), _createElementBlock("div", {
                     key: 1,
+                    class: "gim-reply-preview"
+                  }, [
+                    _createElementVNode("div", null, [
+                      _createElementVNode("strong", null, _toDisplayString(_ctx.t('replyingTo', { name: _ctx.replyTo.username })), 1 /* TEXT */),
+                      (_ctx.quoteImages(_ctx.replyTo).length)
+                        ? (_openBlock(), _createElementBlock("div", {
+                            key: 0,
+                            class: "gim-quote-images"
+                          }, [
+                            (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.quoteImages(_ctx.replyTo), (image) => {
+                              return (_openBlock(), _createElementBlock(_Fragment, {
+                                key: image.url
+                              }, [
+                                (_ctx.safeAttachmentUrl(image.url))
+                                  ? (_openBlock(), _createElementBlock("button", {
+                                      key: 0,
+                                      type: "button",
+                                      class: "gim-image-button",
+                                      "aria-label": _ctx.t('previewImage'),
+                                      onClick: $event => (_ctx.openImagePreview(image, $event))
+                                    }, [
+                                      _createElementVNode("img", {
+                                        class: "gim-quote-image",
+                                        src: image.url,
+                                        alt: image.name
+                                      }, null, 8 /* PROPS */, ["src", "alt"])
+                                    ], 8 /* PROPS */, ["aria-label", "onClick"]))
+                                  : _createCommentVNode("v-if", true)
+                              ], 64 /* STABLE_FRAGMENT */))
+                            }), 128 /* KEYED_FRAGMENT */))
+                          ]))
+                        : _createCommentVNode("v-if", true),
+                      (_ctx.quoteText(_ctx.replyTo))
+                        ? (_openBlock(), _createElementBlock("span", { key: 1 }, _toDisplayString(_ctx.quoteText(_ctx.replyTo)), 1 /* TEXT */))
+                        : _createCommentVNode("v-if", true)
+                    ]),
+                    _createElementVNode("button", {
+                      type: "button",
+                      "aria-label": _ctx.t('cancelReply'),
+                      disabled: _ctx.imageSending || _ctx.voiceSending,
+                      onClick: $event => (_ctx.replyTo = null)
+                    }, "×", 8 /* PROPS */, ["aria-label", "disabled", "onClick"])
+                  ]))
+                : _createCommentVNode("v-if", true),
+              (_ctx.voiceState !== 'idle')
+                ? (_openBlock(), _createElementBlock("div", {
+                    key: 2,
                     class: "gim-voice-recorder"
                   }, [
                     (_ctx.voiceState === 'requesting')
@@ -951,7 +1176,7 @@ export function render(_ctx, _cache) {
                     }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["aria-label", "onClick"])
                   ]))
                 : (_openBlock(), _createElementBlock("div", {
-                    key: 2,
+                    key: 3,
                     class: "gim-composer-input"
                   }, [
                     (_ctx.pendingImages.length)
@@ -978,17 +1203,59 @@ export function render(_ctx, _cache) {
                           }), 128 /* KEYED_FRAGMENT */))
                         ]))
                       : _createCommentVNode("v-if", true),
+                    (_ctx.mentionQuery && !_ctx.composerRestriction && !_ctx.imageSending)
+                      ? (_openBlock(), _createElementBlock("div", {
+                          key: 1,
+                          class: "gim-mention-picker",
+                          "aria-label": _ctx.t('mentionMember')
+                        }, [
+                          (_ctx.groupMembersBusy[_ctx.activeKey || ''])
+                            ? (_openBlock(), _createElementBlock("p", {
+                                key: 0,
+                                role: "status"
+                              }, _toDisplayString(_ctx.t('loadingMembers')), 1 /* TEXT */))
+                            : (_ctx.groupMembersError[_ctx.activeKey || ''])
+                              ? (_openBlock(), _createElementBlock("button", {
+                                  key: 1,
+                                  type: "button",
+                                  class: "gim-history-error",
+                                  onMousedown: _withModifiers(() => {}, ["prevent"]),
+                                  onClick: $event => (_ctx.fetchGroupMembers(_ctx.active))
+                                }, _toDisplayString(_ctx.t('membersLoadFailed')), 41 /* TEXT, PROPS, NEED_HYDRATION */, ["onMousedown", "onClick"]))
+                              : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [
+                                  (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.mentionCandidates, (member, memberIndex) => {
+                                    return (_openBlock(), _createElementBlock("button", {
+                                      key: member.id,
+                                      type: "button",
+                                      class: _normalizeClass(["gim-mention-option", { active: _ctx.mentionIndex === memberIndex }]),
+                                      "aria-pressed": _ctx.mentionIndex === memberIndex,
+                                      onMousedown: _withModifiers(() => {}, ["prevent"]),
+                                      onClick: $event => (_ctx.selectMention(member))
+                                    }, [
+                                      _createElementVNode("strong", null, _toDisplayString(_ctx.displayName(member)), 1 /* TEXT */),
+                                      _createElementVNode("small", null, _toDisplayString(_ctx.t('contactId', { id: member.id })), 1 /* TEXT */)
+                                    ], 42 /* CLASS, PROPS, NEED_HYDRATION */, ["aria-pressed", "onMousedown", "onClick"]))
+                                  }), 128 /* KEYED_FRAGMENT */)),
+                                  (!_ctx.mentionCandidates.length)
+                                    ? (_openBlock(), _createElementBlock("p", { key: 0 }, _toDisplayString(!_ctx.loadGroupMembers && !_ctx.groupMembers[_ctx.activeKey || ''] ? _ctx.t('membersUnavailable') : _ctx.t('noMentionMembers')), 1 /* TEXT */))
+                                    : _createCommentVNode("v-if", true)
+                                ], 64 /* STABLE_FRAGMENT */))
+                        ], 8 /* PROPS */, ["aria-label"]))
+                      : _createCommentVNode("v-if", true),
                     _withDirectives(_createElementVNode("textarea", {
+                      ref: "composerInput",
                       "onUpdate:modelValue": $event => ((_ctx.draft) = $event),
                       "aria-label": _ctx.t('messageInput'),
                       disabled: !!_ctx.composerRestriction || _ctx.imageSending,
                       placeholder: _ctx.composerRestriction || (_ctx.sendKey === 'enter' ? _ctx.t('messagePlaceholder') : _ctx.t('ctrlMessagePlaceholder')),
                       rows: "3",
-                      onInput: _ctx.publishTyping,
+                      onInput: $event => {_ctx.publishTyping(); _ctx.updateMentionQuery($event)},
+                      onClick: _ctx.updateMentionQuery,
+                      onKeyup: $event => (!['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes($event.key) && _ctx.updateMentionQuery($event)),
                       onKeydown: _ctx.onComposerKeydown,
                       onPaste: _ctx.onComposerImage,
-                      onBlur: _ctx.stopTyping
-                    }, null, 40 /* PROPS, NEED_HYDRATION */, ["onUpdate:modelValue", "aria-label", "disabled", "placeholder", "onInput", "onKeydown", "onPaste", "onBlur"]), [
+                      onBlur: $event => {_ctx.stopTyping(); _ctx.mentionQuery = null}
+                    }, null, 40 /* PROPS, NEED_HYDRATION */, ["onUpdate:modelValue", "aria-label", "disabled", "placeholder", "onInput", "onClick", "onKeyup", "onKeydown", "onPaste", "onBlur"]), [
                       [_vModelText, _ctx.draft]
                     ])
                   ])),
@@ -1804,6 +2071,45 @@ export function render(_ctx, _cache) {
                                                 }, _toDisplayString(_ctx.t('blockedUser')), 1 /* TEXT */))
                                               : _createCommentVNode("v-if", true),
                                             _createElementVNode("time", null, _toDisplayString(_ctx.timeLabel(message.timestamp)), 1 /* TEXT */),
+                                            (message.replyTo)
+                                              ? (_openBlock(), _createElementBlock("blockquote", {
+                                                  key: 1,
+                                                  class: "gim-message-quote"
+                                                }, [
+                                                  _createElementVNode("strong", null, _toDisplayString(message.replyTo.username), 1 /* TEXT */),
+                                                  (_ctx.quoteImages(message.replyTo).length)
+                                                    ? (_openBlock(), _createElementBlock("div", {
+                                                        key: 0,
+                                                        class: "gim-quote-images"
+                                                      }, [
+                                                        (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.quoteImages(message.replyTo), (image) => {
+                                                          return (_openBlock(), _createElementBlock(_Fragment, {
+                                                            key: image.url
+                                                          }, [
+                                                            (_ctx.safeAttachmentUrl(image.url))
+                                                              ? (_openBlock(), _createElementBlock("button", {
+                                                                  key: 0,
+                                                                  type: "button",
+                                                                  class: "gim-image-button",
+                                                                  "aria-label": _ctx.t('previewImage'),
+                                                                  onClick: $event => (_ctx.openImagePreview(image, $event))
+                                                                }, [
+                                                                  _createElementVNode("img", {
+                                                                    class: "gim-quote-image",
+                                                                    src: image.url,
+                                                                    alt: image.name
+                                                                  }, null, 8 /* PROPS */, ["src", "alt"])
+                                                                ], 8 /* PROPS */, ["aria-label", "onClick"]))
+                                                              : _createCommentVNode("v-if", true)
+                                                          ], 64 /* STABLE_FRAGMENT */))
+                                                        }), 128 /* KEYED_FRAGMENT */))
+                                                      ]))
+                                                    : _createCommentVNode("v-if", true),
+                                                  (_ctx.quoteText(message.replyTo))
+                                                    ? (_openBlock(), _createElementBlock("span", { key: 1 }, _toDisplayString(_ctx.quoteText(message.replyTo)), 1 /* TEXT */))
+                                                    : _createCommentVNode("v-if", true)
+                                                ]))
+                                              : _createCommentVNode("v-if", true),
                                             _createElementVNode("p", null, _toDisplayString(message.notice ? _ctx.chatNoticeText(message) : message.content), 1 /* TEXT */)
                                           ], 2 /* CLASS */))
                                         }), 128 /* KEYED_FRAGMENT */)),
@@ -1816,6 +2122,74 @@ export function render(_ctx, _cache) {
                                       ]))
           ], 8 /* PROPS */, ["aria-label"])
         ], 8 /* PROPS */, ["onClick"]))
+      : _createCommentVNode("v-if", true),
+    (_ctx.previewImage)
+      ? (_openBlock(), _createElementBlock("div", {
+          key: 5,
+          ref: "imageViewer",
+          class: "gim-image-viewer",
+          role: "dialog",
+          "aria-modal": "true",
+          "aria-label": _ctx.t('previewImage'),
+          tabindex: "-1",
+          onKeydown: _ctx.onImagePreviewKeydown,
+          onClick: _withModifiers(_ctx.closeImagePreview, ["self"])
+        }, [
+          _createElementVNode("button", {
+            type: "button",
+            class: "gim-image-close",
+            "aria-label": _ctx.t('closeImagePreview'),
+            onClick: _ctx.closeImagePreview
+          }, "×", 8 /* PROPS */, ["aria-label", "onClick"]),
+          (_ctx.imageGallery.length > 1)
+            ? (_openBlock(), _createElementBlock("button", {
+                key: 0,
+                type: "button",
+                class: "gim-image-previous",
+                "aria-label": _ctx.t('previousImage'),
+                disabled: _ctx.previewImageIndex === 0,
+                onClick: $event => (_ctx.moveImagePreview(-1))
+              }, [
+                (_openBlock(), _createElementBlock("svg", {
+                  viewBox: "0 0 24 24",
+                  "aria-hidden": "true"
+                }, [
+                  _createElementVNode("path", { d: "M15 6 9 12 15 18" })
+                ]))
+              ], 8 /* PROPS */, ["aria-label", "disabled", "onClick"]))
+            : _createCommentVNode("v-if", true),
+          _createElementVNode("figure", null, [
+            _createElementVNode("img", {
+              class: "gim-preview-image",
+              src: _ctx.previewImage.url,
+              alt: _ctx.previewImage.name
+            }, null, 8 /* PROPS */, ["src", "alt"]),
+            _createElementVNode("figcaption", null, [
+              _createElementVNode("span", null, _toDisplayString(_ctx.previewImage.name), 1 /* TEXT */),
+              _createElementVNode("span", {
+                class: "gim-image-counter",
+                "aria-live": "polite"
+              }, _toDisplayString(_ctx.previewImageIndex + 1) + " / " + _toDisplayString(_ctx.imageGallery.length), 1 /* TEXT */)
+            ])
+          ]),
+          (_ctx.imageGallery.length > 1)
+            ? (_openBlock(), _createElementBlock("button", {
+                key: 1,
+                type: "button",
+                class: "gim-image-next",
+                "aria-label": _ctx.t('nextImage'),
+                disabled: _ctx.previewImageIndex === _ctx.imageGallery.length - 1,
+                onClick: $event => (_ctx.moveImagePreview(1))
+              }, [
+                (_openBlock(), _createElementBlock("svg", {
+                  viewBox: "0 0 24 24",
+                  "aria-hidden": "true"
+                }, [
+                  _createElementVNode("path", { d: "M9 6 15 12 9 18" })
+                ]))
+              ], 8 /* PROPS */, ["aria-label", "disabled", "onClick"]))
+            : _createCommentVNode("v-if", true)
+        ], 40 /* PROPS, NEED_HYDRATION */, ["aria-label", "onKeydown", "onClick"]))
       : _createCommentVNode("v-if", true)
   ], 10 /* CLASS, PROPS */, ["lang"]))
 }

@@ -38,6 +38,7 @@ function normaliseProps(input: TemplateProps | null): TemplateProps {
         : value
     } else if (key === 'inert') props.inert = value ? '' : undefined
     else if (key === 'maxlength') props.maxLength = value
+    else if (key === 'tabindex') props.tabIndex = value
     else props[key] = value
   }
   return props

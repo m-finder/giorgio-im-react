@@ -224,6 +224,17 @@ describe('Laravel and Giorgio Socket connection', () => {
       .toEqual({ ids: [payload!.mid, payload!.mid], bubbles: 1, authenticated: true })
   })
 
+  it('posts group mentions and only the identity of the quoted message', async () => {
+    const fetch = setup()
+    const im = await connect()
+    const mentions = [{ id: 2, username: 'Alice', start: 0, end: 6 }]
+    await im.sendMessage({ user: init.user, receiver: { id: 3, type: 'group' }, content: '@Alice hello', mentions,
+      replyTo: { mid: 'original', fromid: 2, username: 'Local display name', content: 'Local snapshot',
+        attachments: [{ kind: 'image', url: 'https://example.test/photo.png', name: 'photo.png' }] }, timestamp: Date.now() })
+    expect(JSON.parse(fetch.mock.calls.find(([url, options]) => url.endsWith('/messages') && options?.method === 'POST')![1]!.body as string))
+      .toEqual({ id: 3, type: 'group', mid: expect.any(String), content: '@Alice hello', mentions, replyTo: { mid: 'original', fromid: 2 } })
+  })
+
   it('shows a rejected message reason in the chat and reports the failed send to the host', async () => {
     const reason = '发送失败，消息包含敏感词，请修改后重试。'
     setup((path, options) => path === '/messages' && options?.method === 'POST'
