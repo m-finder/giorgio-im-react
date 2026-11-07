@@ -5,12 +5,13 @@ import { createLocalBackup, type LocalBackup } from './storage'
 import { useVoiceRecorder } from './voice'
 import { useMessageSound } from './notifications'
 import { createUuid } from './uuid'
+import { editMentions, messageParts, quoteImages, quoteText } from './message-content'
 import { LocaleError, useImLocale } from './i18n'
 import type { ImLocaleKey } from './locales'
 import defaultAvatar from './assets/default-avatar.png'
 import aiAvatar from './assets/ai-avatar.svg'
 import MarkdownIt from 'markdown-it'
-import type { ImAttachment, ImCallType, ImChatNotice, ImChatType, ImContact, ImFriendGroup, ImGroupMember, ImId, ImInit, ImMessage, ImNotice, ImOptions, ImReadPayload, ImReadReceipt, ImSendPayload, ImToolbarItem, ImToolbarState, ImTypingPayload, ImTypingState } from './types'
+import type { ImAttachment, ImCallType, ImChatNotice, ImChatType, ImContact, ImFriendGroup, ImGroupMember, ImId, ImInit, ImMention, ImMessage, ImMessageReference, ImNotice, ImOptions, ImReadPayload, ImReadReceipt, ImSendPayload, ImToolbarItem, ImToolbarState, ImTypingPayload, ImTypingState } from './types'
 
 type ChatContact = ImContact & { type: ImChatType }
 type GroupContact = ImContact & { type: 'group' }
@@ -47,10 +48,24 @@ const friendMoveError = ref<string | Error>('')
 const friendDragClick = ref(false)
 const friendActionsId = ref<string | null>(null)
 const friendSwipe = ref<{ id: string; offset: number } | null>(null)
+const groupActionsId = ref<string | null>(null)
+const groupSwipe = ref<{ id: string; offset: number } | null>(null)
+const groupSwipeClick = ref(false)
+const groupNotificationBusy = reactive(new Set<string>())
+const groupNotificationError = ref<string | Error>('')
 const blockedUsers = ref<ImContact[]>((props.init.blocked || []).map(contact => ({ ...contact })))
 const draft = ref('')
+let previousDraft = ''
+const composerInput = ref<HTMLTextAreaElement | null>(null)
+const draftMentions = ref<ImMention[]>([])
+const mentionQuery = ref<{ start: number; end: number; query: string } | null>(null)
+const mentionIndex = ref(0)
+const replyTo = ref<ImMessageReference | null>(null)
 const pendingImages = ref<{ file: File; url: string }[]>([])
 const imageSending = ref(false)
+const imagePreviewUrl = ref<string | null>(null)
+const imageViewer = ref<HTMLElement | null>(null)
+let imagePreviewTrigger: HTMLElement | null = null
 const sign = ref(props.init.user.sign || '')
 const savedSign = ref(sign.value)
 const username = ref(props.init.user.username)
@@ -147,6 +162,7 @@ const emojis = [
 ]
 let stopDrag: (() => void) | null = null
 let stopFriendDrag: (() => void) | null = null
+let stopGroupSwipe: (() => void) | null = null
 let localBackup: ReturnType<typeof createLocalBackup> | undefined
 const backupUserId = props.init.user.id
 let backupMounted = false
@@ -159,7 +175,7 @@ const addedGroups = ref<ImContact[]>([])
 const removedFriendIds = ref<Set<string>>(new Set())
 const removedGroupIds = ref<Set<string>>(new Set())
 const groupMemberCounts = reactive<Record<string, number>>({})
-const groupProfiles = reactive<Record<string, { groupname?: string; avatar?: string; adminIds?: ImId[] }>>({})
+const groupProfiles = reactive<Record<string, { groupname?: string; avatar?: string; adminIds?: ImId[]; notificationsMuted?: boolean }>>({})
 const groups = computed(() => [...new Map([...(contactSnapshot.value?.group ?? props.init.group ?? []), ...addedGroups.value].map(contact => [String(contact.id), contact])).values()]
   .filter(contact => !removedGroupIds.value.has(String(contact.id)))
   .map(contact => ({ ...contact, ...groupProfiles[String(contact.id)], members: groupMemberCounts[String(contact.id)] ?? contact.members, type: 'group' as const })))
@@ -193,6 +209,23 @@ const toolbarItems = computed(() => {
     .sort((a, b) => Number(a.align === 'right') - Number(b.align === 'right') || a.order - b.order)
 })
 const activeMessages = computed(() => activeKey.value ? messages[activeKey.value] || [] : [])
+const imageGallery = computed(() => {
+  const images = new Map<string, ImAttachment>()
+  for (const message of activeMessages.value) {
+    if (message.notice) continue
+    for (const image of [...(message.replyTo ? quoteImages(message.replyTo) : []), ...quoteImages(message)]) {
+      if (safeAttachmentUrl(image.url) && !images.has(image.url)) images.set(image.url, image)
+    }
+  }
+  for (const image of replyTo.value ? quoteImages(replyTo.value) : []) {
+    if (safeAttachmentUrl(image.url) && !images.has(image.url)) images.set(image.url, image)
+  }
+  return [...images.values()]
+})
+const previewImageIndex = computed(() => imageGallery.value.findIndex(image => image.url === imagePreviewUrl.value))
+const previewImage = computed(() => imageGallery.value[previewImageIndex.value])
+const mentionCandidates = computed(() => (groupMembers[activeKey.value || ''] || []).filter(member => String(member.id) !== String(props.init.user.id)
+  && !isBlocked(member.id) && displayName(member).toLocaleLowerCase().includes(mentionQuery.value?.query.toLocaleLowerCase() || '')))
 const typingLabel = computed(() => {
   const states = Object.values(typingStates[activeKey.value || ''] || {})
   if (!states.length) return ''
@@ -202,9 +235,9 @@ const typingLabel = computed(() => {
 })
 const totalUnread = computed(() => props.customerService ? unread[keyOf(props.customerService.type, props.customerService.id)] || 0 : Object.values(unread).reduce((sum, count) => sum + count, 0))
 const unreadContacts = computed(() => recentKeys.value
-  .filter(key => unread[key] > 0 && conversations[key] && !isConversationOpen(key))
+  .filter(key => unread[key] > 0 && conversations[key] && alertUnreadCount(key) > 0 && (!isConversationOpen(key) || unreadMentions(key).length > 0))
   .map(key => conversations[key]))
-const notificationUnread = computed(() => unreadContacts.value.reduce((sum, contact) => sum + unread[keyOf(contact.type, contact.id)], 0))
+const notificationUnread = computed(() => unreadContacts.value.reduce((sum, contact) => sum + alertUnreadCount(keyOf(contact.type, contact.id)), 0))
 const unreadNotices = computed(() => notices.value.filter(notice => !notice.read).length)
 const addedFriends = ref<{ contact: ImContact; groupId?: ImId }[]>([])
 const addedFriendGroups = ref<ImFriendGroup[]>([])
@@ -268,8 +301,20 @@ watch(() => props.notices, value => {
   for (const notice of value || []) if (!notices.value.some(item => String(item.id) === String(notice.id))) notices.value.push({ ...notice })
 }, { deep: true })
 watch(activeMessages, () => scrollToBottom(), { deep: true })
+watch([activeKey, chatOpen], closeImagePreview, { flush: 'sync' })
+watch(imageViewer, element => element?.focus(), { flush: 'post' })
 watch([activeKey, chatOpen, pageVisible, activeMessages], markViewedMessages, { deep: true, flush: 'post' })
 watch(draft, value => { if (!value.trim()) stopTyping() })
+watch(draft, value => {
+  draftMentions.value = editMentions(draftMentions.value, previousDraft, value)
+  previousDraft = value
+  mentionQuery.value = null
+}, { flush: 'sync' })
+watch([activeKey, composerRestriction], () => {
+  replyTo.value = null
+  draftMentions.value = []
+  mentionQuery.value = null
+}, { flush: 'sync' })
 watch([activeKey, chatOpen, pageVisible, composerRestriction], stopTyping, { flush: 'sync' })
 watch(activeKey, () => {
   clearPendingImages()
@@ -330,6 +375,7 @@ onUnmounted(() => {
   document.removeEventListener('visibilitychange', updatePageVisibility)
   stopDrag?.()
   stopFriendDrag?.()
+  stopGroupSwipe?.()
   for (const timer of aiTimers.values()) clearTimeout(timer)
   for (const timer of typingTimers.values()) clearTimeout(timer)
 })
@@ -505,10 +551,23 @@ function isConversationVisible(key: string): boolean {
 function isConversationOpen(key: string): boolean {
   return pageVisible.value && chatOpen.value && openKeys.value.includes(key)
 }
-function markUnread(key: string): void {
+function mentionsCurrentUser(message: ImMessage): boolean {
+  return message.type === 'group' && messageParts(message).some(part => part.mention && String(part.mention.id) === String(props.init.user.id))
+}
+function unreadMentions(key: string): ViewMessage[] {
+  return unread[key] > 0 ? (messages[key] || []).filter(message => !message.mine && !message.notice).slice(-unread[key]).filter(mentionsCurrentUser) : []
+}
+function alertUnreadCount(key: string): number {
+  return isGroupNotificationsMuted(conversations[key]) ? unreadMentions(key).length : unread[key] || 0
+}
+function shouldAlert(key: string, message?: ImMessage): boolean {
+  const mentioned = !!message && mentionsCurrentUser(message)
+  return (!isGroupNotificationsMuted(conversations[key]) || mentioned) && (!isConversationOpen(key) || mentioned)
+}
+function markUnread(key: string, message?: ImMessage): void {
   if (isConversationVisible(key)) return
   unread[key] = (unread[key] || 0) + 1
-  if (!isConversationOpen(key)) messageAlertVersion.value++
+  if (shouldAlert(key, message)) messageAlertVersion.value++
 }
 
 function openUnreadMessages(): void {
@@ -539,6 +598,7 @@ function resetWindows(): void {
   close()
   stopDrag?.()
   stopFriendDrag?.()
+  stopGroupSwipe?.()
   panelPosition.value = chatPosition.value = null
   openKeys.value = []
   activeKey.value = null
@@ -811,6 +871,8 @@ function removeGroup(id: ImId): void {
   delete groupProfiles[String(id)]
   delete groupMuteStates[String(id)]
   delete groupMemberMuteStates[String(id)]
+  if (groupSwipe.value?.id === String(id)) stopGroupSwipe?.()
+  if (groupActionsId.value === String(id)) groupActionsId.value = null
   if (managedGroup.value && String(managedGroup.value.id) === String(id)) utility.value = null
 }
 
@@ -868,13 +930,84 @@ function groupInfo(receiver: GroupContact): GroupContact {
   return { ...receiver, ...groups.value.find(group => String(group.id) === String(receiver.id)), ...groupProfiles[String(receiver.id)], type: 'group' }
 }
 
-function applyGroupProfile(receiver: GroupContact, profile: { groupname?: string; avatar?: string; adminIds?: ImId[] }): GroupContact {
+function applyGroupProfile(receiver: GroupContact, profile: { groupname?: string; avatar?: string; adminIds?: ImId[]; notificationsMuted?: boolean }): GroupContact {
   groupProfiles[String(receiver.id)] = { ...groupProfiles[String(receiver.id)], ...profile }
   const group = groupInfo(receiver)
   const key = keyOf('group', receiver.id)
   if (conversations[key]) Object.assign(conversations[key], profile)
   if (managedGroup.value && String(managedGroup.value.id) === String(receiver.id)) managedGroup.value = group
   return group
+}
+
+function isGroupNotificationsMuted(contact?: ImContact): boolean {
+  return contact?.type === 'group' && (groupProfiles[String(contact.id)]?.notificationsMuted
+    ?? groups.value.find(group => String(group.id) === String(contact.id))?.notificationsMuted ?? contact.notificationsMuted ?? false)
+}
+
+function setGroupNotificationsMuted(id: ImId, muted: boolean): void {
+  if (removedGroupIds.value.has(String(id))) return
+  applyGroupProfile({ id, type: 'group' }, { notificationsMuted: muted })
+}
+
+async function toggleGroupNotifications(contact: ImContact): Promise<void> {
+  const id = String(contact.id)
+  if (groupNotificationBusy.has(id) || removedGroupIds.value.has(id)) return
+  const receiver = groupInfo({ ...contact, type: 'group' })
+  const muted = !isGroupNotificationsMuted(receiver)
+  groupNotificationBusy.add(id)
+  groupNotificationError.value = ''
+  try {
+    if (await props.muteGroupNotifications?.(receiver, muted) === false) throw new LocaleError('groupNotificationsFailed')
+    if (disposed || removedGroupIds.value.has(id)) return
+    setGroupNotificationsMuted(contact.id, muted)
+    groupActionsId.value = null
+    emit('groupNotificationsMuted', groupInfo(receiver), muted)
+  } catch { groupNotificationError.value = new LocaleError('groupNotificationsFailed') }
+  finally { groupNotificationBusy.delete(id) }
+}
+
+function startGroupSwipe(event: PointerEvent, contact: ImContact): void {
+  if ((event.button !== 0 && event.pointerType !== 'touch') || groupNotificationBusy.has(String(contact.id))) return
+  stopGroupSwipe?.()
+  const element = event.currentTarget as HTMLElement
+  const startX = event.clientX
+  const startY = event.clientY
+  const wasOpen = groupActionsId.value === String(contact.id)
+  const actionWidth = 72
+  let axis: 'swipe' | 'scroll' | undefined
+  let distance = 0
+  const move = (pointer: PointerEvent) => {
+    if (pointer.pointerId !== event.pointerId) return
+    const dx = pointer.clientX - startX
+    const dy = pointer.clientY - startY
+    if (!axis) {
+      if (Math.hypot(dx, dy) < 8) return
+      axis = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'swipe' : 'scroll'
+      if (axis === 'swipe') element.setPointerCapture?.(event.pointerId)
+    }
+    if (axis !== 'swipe') return
+    pointer.preventDefault()
+    groupSwipeClick.value = true
+    distance = dx
+    groupSwipe.value = { id: String(contact.id), offset: Math.max(-actionWidth, Math.min(0, (wasOpen ? -actionWidth : 0) + dx)) }
+  }
+  const finish = (pointer: PointerEvent) => {
+    if (pointer.pointerId !== event.pointerId) return
+    if (pointer.type === 'pointerup' && axis === 'swipe') groupActionsId.value = distance < -40 ? String(contact.id) : distance > 40 ? null : wasOpen ? String(contact.id) : null
+    stopGroupSwipe?.()
+    setTimeout(() => { groupSwipeClick.value = false }, 0)
+  }
+  stopGroupSwipe = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', finish)
+    window.removeEventListener('pointercancel', finish)
+    if (element.hasPointerCapture?.(event.pointerId)) element.releasePointerCapture(event.pointerId)
+    groupSwipe.value = null
+    stopGroupSwipe = null
+  }
+  window.addEventListener('pointermove', move, { passive: false })
+  window.addEventListener('pointerup', finish)
+  window.addEventListener('pointercancel', finish)
 }
 
 async function saveGroupProfile(event?: Event): Promise<void> {
@@ -1311,8 +1444,8 @@ function getMessage(message: ImMessage): void {
   messages[key].push(item)
   remember(key)
   if (!item.mine && !isConversationVisible(key)) {
-    markUnread(key)
-    if (!isConversationOpen(key)) void playMessageSound()
+    markUnread(key, item)
+    if (shouldAlert(key, item)) void playMessageSound()
   }
   scrollToBottom()
 }
@@ -1456,6 +1589,11 @@ async function send(): Promise<void> {
   const receiver = active.value
   const images = pendingImages.value
   if ((!content && !images.length) || !receiver || messageRestriction(receiver) || voiceState.value !== 'idle' || imageSending.value) return
+  const offset = draft.value.length - draft.value.trimStart().length
+  const mentions = receiver.type === 'group' ? draftMentions.value
+    .filter(mention => groupMembers[activeKey.value || '']?.some(member => String(member.id) === String(mention.id)))
+    .map(mention => ({ ...mention, start: mention.start - offset, end: mention.end - offset })).sort((a, b) => a.start - b.start) : []
+  const metadata = { ...(mentions.length ? { mentions } : {}), ...(replyTo.value ? { replyTo: { ...replyTo.value } } : {}) }
   let attachment: ImAttachment | undefined
   let attachments: ImAttachment[] | undefined
   if (images.length) {
@@ -1482,14 +1620,60 @@ async function send(): Promise<void> {
   const messageContent = content || images[0]?.file.name || ''
   const timestamp = Date.now()
   const mid = createUuid()
-  getMessage({ id: receiver.id, type: receiver.type, content: messageContent, ...(attachment ? { attachment } : {}), ...(attachments ? { attachments } : {}), mid, username: username.value, avatar: userAvatar.value, timestamp, fromid: props.init.user.id, mine: true })
+  getMessage({ id: receiver.id, type: receiver.type, content: messageContent, ...metadata, ...(attachment ? { attachment } : {}), ...(attachments ? { attachments } : {}), mid, username: username.value, avatar: userAvatar.value, timestamp, fromid: props.init.user.id, mine: true })
   draft.value = ''
+  replyTo.value = null
   clearPendingImages()
   if (receiver.type === 'ai') startAIReply(receiver)
-  emit('sendMessage', { user: currentUser.value, receiver, content: messageContent, ...(attachment ? { attachment } : {}), ...(attachments ? { attachments } : {}), timestamp, mid })
+  emit('sendMessage', { user: currentUser.value, receiver, content: messageContent, ...metadata, ...(attachment ? { attachment } : {}), ...(attachments ? { attachments } : {}), timestamp, mid })
+}
+
+function updateMentionQuery(event: Event): void {
+  const input = event.target as HTMLTextAreaElement
+  const match = /(?:^|\s)@([^@\s]*)$/.exec(input.value.slice(0, input.selectionStart))
+  if (active.value?.type !== 'group' || composerRestriction.value || imageSending.value || !match || input.selectionStart !== input.selectionEnd
+    || draftMentions.value.some(mention => input.selectionStart > mention.start && input.selectionStart <= mention.end)) {
+    mentionQuery.value = null
+    return
+  }
+  mentionQuery.value = { start: input.selectionStart - match[1].length - 1, end: input.selectionStart, query: match[1] }
+  mentionIndex.value = 0
+  if (!groupMembers[activeKey.value || ''] && !groupMembersError[activeKey.value || '']) void fetchGroupMembers(active.value)
+}
+
+function selectMention(member: ImGroupMember): void {
+  const query = mentionQuery.value
+  if (!query || composerRestriction.value || imageSending.value || !mentionCandidates.value.some(item => String(item.id) === String(member.id))) return
+  const name = displayName(member)
+  draft.value = `${draft.value.slice(0, query.start)}@${name} ${draft.value.slice(query.end)}`
+  const end = query.start + name.length + 1
+  draftMentions.value = [...draftMentions.value, { id: member.id, username: name, start: query.start, end }]
+  mentionQuery.value = null
+  void nextTick(() => { composerInput.value?.focus(); composerInput.value?.setSelectionRange(end + 1, end + 1) })
+  publishTyping()
+}
+
+function quoteMessage(message: ViewMessage): void {
+  const fromid = message.mine ? props.init.user.id : message.fromid ?? (message.type === 'friend' ? message.id : undefined)
+  if (message.type === 'ai' || message.notice || message.mid === undefined || fromid === undefined || composerRestriction.value || imageSending.value || voiceSending.value) return
+  replyTo.value = { mid: message.mid, fromid, username: message.mine ? username.value : message.username || displayName(active.value!),
+    content: message.content || message.attachment?.name || message.attachments?.map(image => image.name).join(', ') || '',
+    ...(message.attachment ? { attachment: { ...message.attachment } } : {}),
+    ...(message.attachments?.length ? { attachments: message.attachments.map(attachment => ({ ...attachment })) } : {}) }
+  void nextTick(() => composerInput.value?.focus())
 }
 
 function onComposerKeydown(event: KeyboardEvent): void {
+  if (event.isComposing || (event as KeyboardEvent & { nativeEvent?: KeyboardEvent }).nativeEvent?.isComposing) return
+  if (mentionQuery.value) {
+    if (event.key === 'Escape') { event.preventDefault(); mentionQuery.value = null; return }
+    if (mentionCandidates.value.length && ['ArrowDown', 'ArrowUp', 'Enter', 'Tab'].includes(event.key) && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault()
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') mentionIndex.value = (mentionIndex.value + (event.key === 'ArrowDown' ? 1 : -1) + mentionCandidates.value.length) % mentionCandidates.value.length
+      else selectMention(mentionCandidates.value[mentionIndex.value] || mentionCandidates.value[0])
+      return
+    }
+  }
   if (event.key === 'Enter' && !event.isComposing && (sendKey.value === 'ctrl-enter' ? event.ctrlKey || event.metaKey : !event.shiftKey && !event.ctrlKey && !event.metaKey)) {
     event.preventDefault()
     send()
@@ -1544,6 +1728,38 @@ function safeAttachmentUrl(url: string): string {
   } catch { return '' }
 }
 
+function openImagePreview(image: ImAttachment, event: MouseEvent): void {
+  if (!safeAttachmentUrl(image.url)) return
+  imagePreviewTrigger = event.currentTarget as HTMLElement
+  imagePreviewUrl.value = image.url
+}
+
+function closeImagePreview(): void {
+  imagePreviewUrl.value = null
+  if (imagePreviewTrigger?.isConnected) imagePreviewTrigger.focus()
+  imagePreviewTrigger = null
+}
+
+function moveImagePreview(offset: number): void {
+  const image = imageGallery.value[previewImageIndex.value + offset]
+  if (image) imagePreviewUrl.value = image.url
+}
+
+function onImagePreviewKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Tab') {
+    const buttons = Array.from(imageViewer.value?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') || [])
+    if (!buttons.length) return
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+    event.preventDefault()
+    buttons[index < 0 ? (event.shiftKey ? buttons.length - 1 : 0) : (index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus()
+  } else if (['Escape', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.key === 'Escape') closeImagePreview()
+    else moveImagePreview(event.key === 'ArrowLeft' ? -1 : 1)
+  }
+}
+
 function clearPendingImages(): void {
   for (const image of pendingImages.value) URL.revokeObjectURL(image.url)
   pendingImages.value = []
@@ -1574,6 +1790,7 @@ async function sendAttachment(event: Event, kind: ImAttachment['kind']): Promise
   const receiver = active.value
   input.value = ''
   if (!file || !receiver || messageRestriction(receiver)) return
+  const reference = replyTo.value
   toolbarError.value = ''
   if (!props.uploadAttachment) {
     toolbarError.value = new LocaleError('uploadAttachmentRequired')
@@ -1586,9 +1803,11 @@ async function sendAttachment(event: Event, kind: ImAttachment['kind']): Promise
     const attachment = { kind, url, name: file.name }
     const timestamp = Date.now()
     const mid = createUuid()
-    getMessage({ id: receiver.id, type: receiver.type, content: file.name, attachment, timestamp, mid, mine: true, username: username.value, fromid: props.init.user.id })
+    const metadata = reference ? { replyTo: { ...reference } } : {}
+    getMessage({ id: receiver.id, type: receiver.type, content: file.name, ...metadata, attachment, timestamp, mid, mine: true, username: username.value, fromid: props.init.user.id })
+    if (replyTo.value === reference) replyTo.value = null
     if (receiver.type === 'ai') startAIReply(receiver)
-    emit('sendMessage', { user: currentUser.value, receiver, content: file.name, attachment, timestamp, mid })
+    emit('sendMessage', { user: currentUser.value, receiver, content: file.name, ...metadata, attachment, timestamp, mid })
   } catch {
     toolbarError.value = new LocaleError('uploadFailed')
   }
@@ -1617,6 +1836,7 @@ async function sendVoice(): Promise<void> {
   const upload = props.uploadVoice ?? props.uploadAttachment
   if (!upload) { toolbarError.value = new LocaleError('uploadVoiceRequired'); return }
   const duration = voiceDuration.value
+  const reference = replyTo.value
   const session = toolbarSession
   const isCurrent = () => !disposed && chatOpen.value && session === toolbarSession && voiceFile.value === file && !messageRestriction(receiver)
   voiceSending.value = true
@@ -1627,8 +1847,10 @@ async function sendVoice(): Promise<void> {
     const attachment: ImAttachment = { kind: 'audio', url, name: file.name, duration }
     const timestamp = Date.now()
     const mid = createUuid()
-    getMessage({ ...receiver, content: t('voiceContent'), attachment, timestamp, mid, fromid: currentUser.value.id, mine: true, username: username.value, avatar: userAvatar.value })
-    emit('sendMessage', { user: currentUser.value, receiver, content: t('voiceContent'), timestamp, attachment, mid })
+    const metadata = reference ? { replyTo: { ...reference } } : {}
+    getMessage({ ...receiver, content: t('voiceContent'), ...metadata, attachment, timestamp, mid, fromid: currentUser.value.id, mine: true, username: username.value, avatar: userAvatar.value })
+    if (replyTo.value === reference) replyTo.value = null
+    emit('sendMessage', { user: currentUser.value, receiver, content: t('voiceContent'), ...metadata, timestamp, attachment, mid })
     cancelVoice()
     voiceSending.value = false
   } catch {
@@ -1700,7 +1922,7 @@ function timeLabel(timestamp: number): string {
 
 
   return {
-    api: { setContacts, setUser, updateContact, setGroupMembers, chat, getMessage, getChatNotice, setMessageRead, setTyping, addContacts, addFriendGroup, moveFriend, removeFriend, deleteFriend, blockFriend, unblockFriend, setFriendBlocked, setBlockedUsers, getBlockedUsers, removeGroup, setGroupMute, setGroupAdmin, getNotice, setFriendStatus, setChatStatus, setToolbar, open, close, resetWindows, setLocale },
-    context: { props, locale, t, setLocale, errorText, timeFormatter, voiceState, voiceDuration, voicePreview, voiceFile, voiceError, startVoice, stopVoice, cancelVoice, defaultAvatar, aiAvatar, panelOpen, chatOpen, pageVisible, playMessageSound, messageAlert, messageAlertVersion, messageAlertAnimation, tab, search, searchOpen, searchInput, collapsedGroups, draggedFriend, friendDropTarget, friendMoveBusy, friendMoveError, friendDragClick, friendActionsId, friendSwipe, blockedUsers, draft, pendingImages, imageSending, sign, savedSign, username, usernameDraft, userAvatar, avatarInput, avatarBusy, avatarError, avatarRequest, online, currentUser, activeKey, openKeys, recentKeys, conversations, messages, aiPending, aiTimers, markdown, unread, friendStatus, chatStatus, readReceipts, readNotified, typingStates, typingTimers, localTyping, typingIdleTimer, lastTypingSentAt, historyError, loadedHistory, messageList, panelElement, chatElement, panelPosition, chatPosition, frontWindow, utility, managementBusy, managementError, newFriendGroupName, creatingFriendGroup, selectedGroupId, managedFriend, pendingNotice, managedGroup, managedMember, newGroupName, groupAvatarInput, memberQuery, selectedMemberIds, groupMembers, groupMuteStates, groupMemberMuteStates, groupMembersBusy, groupMembersError, findQuery, findResults, findBusy, findError, addBusy, requestedIds, notices, theme, sendKey, emojiOpen, toolbarError, toolbarOverrides, toolbarBusy, toolbarSession, callBusy, voiceSending, imageInput, fileInput, emojis, stopDrag, stopFriendDrag, localBackup, backupUserId, backupMounted, disposed, keyOf, contactSnapshot, friends, addedGroups, removedFriendIds, removedGroupIds, groupMemberCounts, groupProfiles, groups, active, composerRestriction, toolbarState, toolbarItems, activeMessages, typingLabel, totalUnread, unreadContacts, notificationUnread, unreadNotices, addedFriends, addedFriendGroups, friendGroupAssignments, friendGroups, utilityTitle, selectableFriends, existingMemberIds, managedGroupKey, query, visibleGroups, visibleChats, visibleRecent, backupSnapshot, saveBackup, configureBackup, displayName, avatarLetter, isOffline, toggleSearch, toggleGroup, scrollToBottom, normalise, remember, ensureConversation, fetchHistory, chat, updatePageVisibility, isConversationVisible, isConversationOpen, markUnread, openUnreadMessages, open, close, resetWindows, windowStyle, adjustDraggedChatWidth, startDrag, addContacts, addFriendGroup, setUser, setContacts, updateContact, setGroupMembers, moveFriend, removeConversation, removeFriend, isBlocked, isBlockedContact, isBlockedMessage, getBlockedUsers, setFriendBlocked, setBlockedUsers, changeFriend, deleteFriend, blockFriend, unblockFriend, confirmFriendAction, submitFriendAction, removeGroup, getNotice, openUtility, fetchGroupMembers, updateMemberCount, groupInfo, applyGroupProfile, saveGroupProfile, isGroupOwner, isGroupAdmin, canManageGroup, canManageMember, setGroupAdmin, assertGroupManagement, isGroupMuted, isMemberMuted, setGroupMute, messageRestriction, moderateGroup, startFriendDrag, dropFriend, saveFriendGroup, submitFriendManagement, submitGroupManagement, runFind, requestAdd, actOnNotice, saveSettings, closeChat, getMessage, finishAIReply, waitForAI, startAIReply, receiveAIMessage, getChatNotice, chatNoticeText, setMessageRead, markViewedMessages, setTyping, publishTyping, stopTyping, setFriendStatus, setChatStatus, send, onComposerKeydown, insertEmoji, setToolbar, runToolbar, safeAttachmentUrl, clearPendingImages, removePendingImage, onComposerImage, sendAttachment, requestCall, sendVoice, updateOnline, updateSign, updateUsername, readAvatar, updateAvatar, timeLabel },
+    api: { setContacts, setUser, updateContact, setGroupMembers, chat, getMessage, getChatNotice, setMessageRead, setTyping, addContacts, addFriendGroup, moveFriend, removeFriend, deleteFriend, blockFriend, unblockFriend, setFriendBlocked, setBlockedUsers, getBlockedUsers, removeGroup, setGroupMute, setGroupNotificationsMuted, setGroupAdmin, getNotice, setFriendStatus, setChatStatus, setToolbar, open, close, resetWindows, setLocale },
+    context: { props, locale, t, setLocale, errorText, timeFormatter, voiceState, voiceDuration, voicePreview, voiceFile, voiceError, startVoice, stopVoice, cancelVoice, defaultAvatar, aiAvatar, messageParts, quoteImages, quoteText, panelOpen, chatOpen, pageVisible, playMessageSound, messageAlert, messageAlertVersion, messageAlertAnimation, tab, search, searchOpen, searchInput, collapsedGroups, draggedFriend, friendDropTarget, friendMoveBusy, friendMoveError, friendDragClick, friendActionsId, friendSwipe, groupActionsId, groupSwipe, groupSwipeClick, groupNotificationBusy, groupNotificationError, blockedUsers, draft, previousDraft, composerInput, draftMentions, mentionQuery, mentionIndex, replyTo, pendingImages, imageSending, imagePreviewUrl, imageViewer, imagePreviewTrigger, sign, savedSign, username, usernameDraft, userAvatar, avatarInput, avatarBusy, avatarError, avatarRequest, online, currentUser, activeKey, openKeys, recentKeys, conversations, messages, aiPending, aiTimers, markdown, unread, friendStatus, chatStatus, readReceipts, readNotified, typingStates, typingTimers, localTyping, typingIdleTimer, lastTypingSentAt, historyError, loadedHistory, messageList, panelElement, chatElement, panelPosition, chatPosition, frontWindow, utility, managementBusy, managementError, newFriendGroupName, creatingFriendGroup, selectedGroupId, managedFriend, pendingNotice, managedGroup, managedMember, newGroupName, groupAvatarInput, memberQuery, selectedMemberIds, groupMembers, groupMuteStates, groupMemberMuteStates, groupMembersBusy, groupMembersError, findQuery, findResults, findBusy, findError, addBusy, requestedIds, notices, theme, sendKey, emojiOpen, toolbarError, toolbarOverrides, toolbarBusy, toolbarSession, callBusy, voiceSending, imageInput, fileInput, emojis, stopDrag, stopFriendDrag, stopGroupSwipe, localBackup, backupUserId, backupMounted, disposed, keyOf, contactSnapshot, friends, addedGroups, removedFriendIds, removedGroupIds, groupMemberCounts, groupProfiles, groups, active, composerRestriction, toolbarState, toolbarItems, activeMessages, imageGallery, previewImageIndex, previewImage, mentionCandidates, typingLabel, totalUnread, unreadContacts, notificationUnread, unreadNotices, addedFriends, addedFriendGroups, friendGroupAssignments, friendGroups, utilityTitle, selectableFriends, existingMemberIds, managedGroupKey, query, visibleGroups, visibleChats, visibleRecent, backupSnapshot, saveBackup, configureBackup, displayName, avatarLetter, isOffline, toggleSearch, toggleGroup, scrollToBottom, normalise, remember, ensureConversation, fetchHistory, chat, updatePageVisibility, isConversationVisible, isConversationOpen, mentionsCurrentUser, unreadMentions, alertUnreadCount, shouldAlert, markUnread, openUnreadMessages, open, close, resetWindows, windowStyle, adjustDraggedChatWidth, startDrag, addContacts, addFriendGroup, setUser, setContacts, updateContact, setGroupMembers, moveFriend, removeConversation, removeFriend, isBlocked, isBlockedContact, isBlockedMessage, getBlockedUsers, setFriendBlocked, setBlockedUsers, changeFriend, deleteFriend, blockFriend, unblockFriend, confirmFriendAction, submitFriendAction, removeGroup, getNotice, openUtility, fetchGroupMembers, updateMemberCount, groupInfo, applyGroupProfile, isGroupNotificationsMuted, setGroupNotificationsMuted, toggleGroupNotifications, startGroupSwipe, saveGroupProfile, isGroupOwner, isGroupAdmin, canManageGroup, canManageMember, setGroupAdmin, assertGroupManagement, isGroupMuted, isMemberMuted, setGroupMute, messageRestriction, moderateGroup, startFriendDrag, dropFriend, saveFriendGroup, submitFriendManagement, submitGroupManagement, runFind, requestAdd, actOnNotice, saveSettings, closeChat, getMessage, finishAIReply, waitForAI, startAIReply, receiveAIMessage, getChatNotice, chatNoticeText, setMessageRead, markViewedMessages, setTyping, publishTyping, stopTyping, setFriendStatus, setChatStatus, send, updateMentionQuery, selectMention, quoteMessage, onComposerKeydown, insertEmoji, setToolbar, runToolbar, safeAttachmentUrl, openImagePreview, closeImagePreview, moveImagePreview, onImagePreviewKeydown, clearPendingImages, removePendingImage, onComposerImage, sendAttachment, requestCall, sendVoice, updateOnline, updateSign, updateUsername, readAvatar, updateAvatar, timeLabel },
   }
 }
