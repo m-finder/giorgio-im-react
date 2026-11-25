@@ -16,7 +16,8 @@ function normaliseProps(input: TemplateProps | null): TemplateProps {
   for (const [key, value] of Object.entries(input)) {
     if (key === 'class') props.className = value
     else if (key === 'innerHTML') props.dangerouslySetInnerHTML = { __html: value }
-    else if (key === 'hidden' || key === 'controls') props[key] = value === '' ? true : value
+    else if (key === 'hidden' || key === 'controls' || key === 'muted') props[key] = value === '' ? true : value
+    else if (key === 'autoplay' || key === 'playsinline') props[key === 'autoplay' ? 'autoPlay' : 'playsInline'] = value === '' ? true : value
     else if (key === 'ref' && typeof value === 'string') {
       let callbacks = refCallbacks.get(currentContext)
       if (!callbacks) { callbacks = new Map(); refCallbacks.set(currentContext, callbacks) }

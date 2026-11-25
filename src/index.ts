@@ -13,11 +13,11 @@ export type { ImTransportOptions } from './transport'
 export { zhCN, en } from './locales'
 export type { ImLocaleKey, ImLocaleMessages, ImLocaleParams, ImLocales } from './locales'
 export type {
-  ImId, ImChatType, ImUser, ImContact, ImGroupMember, ImFriendGroup, ImInit,
+  ImId, ImChatType, ImSkin, ImUser, ImContact, ImGroupMember, ImFriendGroup, ImInit,
   ImMessage, ImMention, ImMessageReference, ImChatNotice, ImReadPayload, ImReadReceipt, ImTypingPayload, ImTypingState,
   ImAttachment, ImSendPayload, ImNotice, ImCreateGroupPayload, ImWidgetApi, ImOptions,
   ImBuiltinTool, ImToolbarState, ImToolbarContext, ImToolbarItem,
-  ImCallType, ImCallPayload,
+  ImCallType, ImCallPayload, ImCallSignal, ImVoiceCallOptions,
 } from './types'
 
 /** Mount a self-contained React IM widget and return its public methods. */

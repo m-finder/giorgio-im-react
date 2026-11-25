@@ -1,15 +1,172 @@
 // @ts-nocheck
 // React elements generated from the matching Giorgio IM view.
-import { createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, toDisplayString as _toDisplayString, createCommentVNode as _createCommentVNode, normalizeClass as _normalizeClass, vModelText as _vModelText, withKeys as _withKeys, withDirectives as _withDirectives, renderList as _renderList, Fragment as _Fragment, createTextVNode as _createTextVNode, withModifiers as _withModifiers, normalizeStyle as _normalizeStyle, vModelSelect as _vModelSelect, vModelCheckbox as _vModelCheckbox } from "./react-template"
+import { createElementVNode as _createElementVNode, toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, createTextVNode as _createTextVNode, renderList as _renderList, Fragment as _Fragment, normalizeClass as _normalizeClass, vModelText as _vModelText, withKeys as _withKeys, withDirectives as _withDirectives, withModifiers as _withModifiers, normalizeStyle as _normalizeStyle, vModelSelect as _vModelSelect, vModelCheckbox as _vModelCheckbox } from "./react-template"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", {
-    class: _normalizeClass(["gim-root", { 'gim-dark': _ctx.theme === 'dark' }]),
-    lang: _ctx.locale
+    class: _normalizeClass(["gim-root", { 'gim-dark': _ctx.theme === 'dark', 'gim-wallpaper': !!_ctx.backgroundImage }]),
+    lang: _ctx.locale,
+    "data-skin": _ctx.skin,
+    style: _normalizeStyle(_ctx.widgetStyle)
   }, [
+    (_ctx.callState.phase !== 'idle')
+      ? (_openBlock(), _createElementBlock("section", {
+          key: 0,
+          class: _normalizeClass(["gim-call", { 'gim-call-video': _ctx.callState.type === 'video' }]),
+          role: "dialog",
+          "aria-label": _ctx.t(_ctx.callState.type === 'video' ? 'videoCall' : 'voiceCall')
+        }, [
+          _createElementVNode("img", {
+            src: _ctx.callState.contact?.avatar || _ctx.defaultAvatar,
+            alt: ""
+          }, null, 8 /* PROPS */, ["src"]),
+          _createElementVNode("strong", null, _toDisplayString(_ctx.callState.contact?.groupname || _ctx.callState.contact?.username || _ctx.t(_ctx.callState.type === 'video' ? 'videoCall' : 'voiceCall')), 1 /* TEXT */),
+          _createElementVNode("p", {
+            role: "status",
+            "aria-live": "polite"
+          }, [
+            _createTextVNode(_toDisplayString(_ctx.t(_ctx.callStatus)), 1 /* TEXT */),
+            (_ctx.callState.phase === 'connected')
+              ? (_openBlock(), _createElementBlock("span", { key: 0 }, " · " + _toDisplayString(Math.floor(_ctx.callState.duration / 60).toString().padStart(2, '0')) + ":" + _toDisplayString((_ctx.callState.duration % 60).toString().padStart(2, '0')), 1 /* TEXT */))
+              : _createCommentVNode("v-if", true)
+          ]),
+          (_ctx.callState.groupId !== undefined && _ctx.callActive && _ctx.callState.phase !== 'incoming')
+            ? (_openBlock(), _createElementBlock("div", {
+                key: 0,
+                class: _normalizeClass(["gim-call-participants", { 'gim-call-participants-video': _ctx.callState.type === 'video' }])
+              }, [
+                (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.remoteCallParticipants, (member) => {
+                  return (_openBlock(), _createElementBlock("div", {
+                    key: member.id,
+                    class: "gim-call-participant",
+                    "data-user-id": member.id
+                  }, [
+                    (_ctx.callState.type === 'video')
+                      ? (_openBlock(), _createElementBlock("video", {
+                          key: 0,
+                          ref_for: true,
+                          ref: _ctx.groupVideoReference(member.id),
+                          class: "gim-group-call-video",
+                          "data-user-id": member.id,
+                          "aria-label": member.username || _ctx.t('callRemoteVideo'),
+                          autoplay: "",
+                          muted: "",
+                          playsinline: ""
+                        }, null, 8 /* PROPS */, ["data-user-id", "aria-label"]))
+                      : (_openBlock(), _createElementBlock("img", {
+                          key: 1,
+                          src: member.avatar || _ctx.defaultAvatar,
+                          alt: ""
+                        }, null, 8 /* PROPS */, ["src"])),
+                    _createElementVNode("span", null, _toDisplayString(member.username || _ctx.t('callRemoteVideo')), 1 /* TEXT */)
+                  ], 8 /* PROPS */, ["data-user-id"]))
+                }), 128 /* KEYED_FRAGMENT */)),
+                (!_ctx.remoteCallParticipants.length)
+                  ? (_openBlock(), _createElementBlock("p", { key: 0 }, _toDisplayString(_ctx.t('groupCallWaiting')), 1 /* TEXT */))
+                  : _createCommentVNode("v-if", true),
+                (_ctx.callState.type === 'video')
+                  ? (_openBlock(), _createElementBlock("div", {
+                      key: 1,
+                      class: _normalizeClass(["gim-call-preview", { 'gim-call-camera-off': _ctx.callState.cameraOff }])
+                    }, [
+                      _createElementVNode("video", {
+                        ref: _ctx.setLocalVideo,
+                        "aria-label": _ctx.t('callLocalVideo'),
+                        autoplay: "",
+                        muted: "",
+                        playsinline: ""
+                      }, null, 8 /* PROPS */, ["aria-label"]),
+                      (_ctx.callState.cameraOff)
+                        ? (_openBlock(), _createElementBlock("span", { key: 0 }, _toDisplayString(_ctx.t('callCameraOff')), 1 /* TEXT */))
+                        : _createCommentVNode("v-if", true)
+                    ], 2 /* CLASS */))
+                  : _createCommentVNode("v-if", true)
+              ], 2 /* CLASS */))
+            : (_ctx.callState.type === 'video' && _ctx.callActive && _ctx.callState.phase !== 'incoming')
+              ? (_openBlock(), _createElementBlock("div", {
+                  key: 1,
+                  class: "gim-call-videos"
+                }, [
+                  _createElementVNode("video", {
+                    ref: _ctx.setRemoteVideo,
+                    class: "gim-call-remote",
+                    "aria-label": _ctx.t('callRemoteVideo'),
+                    autoplay: "",
+                    muted: "",
+                    playsinline: ""
+                  }, null, 8 /* PROPS */, ["aria-label"]),
+                  (_ctx.callState.phase !== 'connected')
+                    ? (_openBlock(), _createElementBlock("span", {
+                        key: 0,
+                        class: "gim-call-video-waiting"
+                      }, _toDisplayString(_ctx.t('callWaitingVideo')), 1 /* TEXT */))
+                    : _createCommentVNode("v-if", true),
+                  _createElementVNode("div", {
+                    class: _normalizeClass(["gim-call-preview", { 'gim-call-camera-off': _ctx.callState.cameraOff }])
+                  }, [
+                    _createElementVNode("video", {
+                      ref: _ctx.setLocalVideo,
+                      "aria-label": _ctx.t('callLocalVideo'),
+                      autoplay: "",
+                      muted: "",
+                      playsinline: ""
+                    }, null, 8 /* PROPS */, ["aria-label"]),
+                    (_ctx.callState.cameraOff)
+                      ? (_openBlock(), _createElementBlock("span", { key: 0 }, _toDisplayString(_ctx.t('callCameraOff')), 1 /* TEXT */))
+                      : _createCommentVNode("v-if", true)
+                  ], 2 /* CLASS */)
+                ]))
+              : _createCommentVNode("v-if", true),
+          _createElementVNode("div", { class: "gim-call-actions" }, [
+            (_ctx.callState.phase === 'incoming')
+              ? (_openBlock(), _createElementBlock("button", {
+                  key: 0,
+                  type: "button",
+                  class: "gim-call-accept",
+                  onClick: _ctx.acceptCall
+                }, _toDisplayString(_ctx.t('callAccept')), 9 /* TEXT, PROPS */, ["onClick"]))
+              : _createCommentVNode("v-if", true),
+            (['calling', 'connecting', 'connected'].includes(_ctx.callState.phase))
+              ? (_openBlock(), _createElementBlock("button", {
+                  key: 1,
+                  type: "button",
+                  "aria-pressed": _ctx.callState.muted,
+                  onClick: _ctx.callController.mute
+                }, _toDisplayString(_ctx.t(_ctx.callState.muted ? 'callUnmute' : 'callMute')), 9 /* TEXT, PROPS */, ["aria-pressed", "onClick"]))
+              : _createCommentVNode("v-if", true),
+            (_ctx.callState.type === 'video' && ['calling', 'connecting', 'connected'].includes(_ctx.callState.phase))
+              ? (_openBlock(), _createElementBlock("button", {
+                  key: 2,
+                  type: "button",
+                  "aria-pressed": _ctx.callState.cameraOff,
+                  onClick: _ctx.callController.camera
+                }, _toDisplayString(_ctx.t(_ctx.callState.cameraOff ? 'callEnableCamera' : 'callDisableCamera')), 9 /* TEXT, PROPS */, ["aria-pressed", "onClick"]))
+              : _createCommentVNode("v-if", true),
+            (_ctx.callState.playbackBlocked)
+              ? (_openBlock(), _createElementBlock("button", {
+                  key: 3,
+                  type: "button",
+                  onClick: _ctx.callController.play
+                }, _toDisplayString(_ctx.t('callPlayAudio')), 9 /* TEXT, PROPS */, ["onClick"]))
+              : _createCommentVNode("v-if", true),
+            (_ctx.callActive)
+              ? (_openBlock(), _createElementBlock("button", {
+                  key: 4,
+                  type: "button",
+                  class: "gim-call-end",
+                  onClick: _ctx.hangupCall
+                }, _toDisplayString(_ctx.t(_ctx.callState.phase === 'incoming' ? 'callReject' : 'callHangup')), 9 /* TEXT, PROPS */, ["onClick"]))
+              : (_openBlock(), _createElementBlock("button", {
+                  key: 5,
+                  type: "button",
+                  onClick: _ctx.callController.dismiss
+                }, _toDisplayString(_ctx.t('callClose')), 9 /* TEXT, PROPS */, ["onClick"]))
+          ])
+        ], 10 /* CLASS, PROPS */, ["aria-label"]))
+      : _createCommentVNode("v-if", true),
     (_ctx.customerService ? !_ctx.chatOpen : !_ctx.panelOpen)
       ? (_openBlock(), _createElementBlock("button", {
-          key: 0,
+          key: 1,
           class: _normalizeClass(["gim-launcher", { 'gim-service-launcher': _ctx.customerService }]),
           type: "button",
           "aria-label": _ctx.customerService ? _ctx.t('openSupport') : _ctx.t('openChat'),
@@ -39,7 +196,7 @@ export function render(_ctx, _cache) {
       : _createCommentVNode("v-if", true),
     (_ctx.messageNotification !== false && _ctx.notificationUnread)
       ? (_openBlock(), _createElementBlock("button", {
-          key: 1,
+          key: 2,
           ref: "messageAlert",
           class: _normalizeClass(["gim-message-alert", { 'gim-message-alert-panel': _ctx.panelOpen && !_ctx.customerService }]),
           type: "button",
@@ -71,7 +228,7 @@ export function render(_ctx, _cache) {
       : _createCommentVNode("v-if", true),
     (_ctx.panelOpen && !_ctx.customerService)
       ? (_openBlock(), _createElementBlock("section", {
-          key: 2,
+          key: 3,
           ref: "panelElement",
           class: "gim-panel gim-window",
           style: _normalizeStyle(_ctx.windowStyle('panel')),
@@ -581,7 +738,7 @@ export function render(_ctx, _cache) {
       : _createCommentVNode("v-if", true),
     (_ctx.chatOpen && _ctx.active)
       ? (_openBlock(), _createElementBlock("section", {
-          key: 3,
+          key: 4,
           ref: "chatElement",
           class: _normalizeClass(["gim-chat gim-window", { 'gim-chat-many': !_ctx.customerService && _ctx.openKeys.length > 1, 'gim-service-chat': _ctx.customerService, 'gim-ai-chat': _ctx.active.type === 'ai', 'gim-chat-maximized': _ctx.active.type === 'ai' && _ctx.active.maximized }]),
           style: _normalizeStyle(_ctx.windowStyle('chat')),
@@ -717,9 +874,30 @@ export function render(_ctx, _cache) {
                   ], 8 /* PROPS */, ["aria-label", "title", "onClick"]))
                 : _createCommentVNode("v-if", true),
               _createElementVNode("div", { class: "gim-chat-controls" }, [
-                (_ctx.active.type === 'ai')
+                (_ctx.customerService)
                   ? (_openBlock(), _createElementBlock("button", {
                       key: 0,
+                      type: "button",
+                      "aria-label": _ctx.t('settings'),
+                      title: _ctx.t('settings'),
+                      onClick: $event => (_ctx.openUtility('settings'))
+                    }, [
+                      (_openBlock(), _createElementBlock("svg", {
+                        viewBox: "0 0 24 24",
+                        "aria-hidden": "true"
+                      }, [
+                        _createElementVNode("path", { d: "m10 3-.6 2.5-1.6.9-2.5-.7-2 3.5 1.9 1.8v2l-1.9 1.8 2 3.5 2.5-.7 1.6.9.6 2.5h4l.6-2.5 1.6-.9 2.5.7 2-3.5-1.9-1.8v-2l1.9-1.8-2-3.5-2.5.7-1.6-.9L14 3Z" }),
+                        _createElementVNode("circle", {
+                          cx: "12",
+                          cy: "12",
+                          r: "3"
+                        })
+                      ]))
+                    ], 8 /* PROPS */, ["aria-label", "title", "onClick"]))
+                  : _createCommentVNode("v-if", true),
+                (_ctx.active.type === 'ai')
+                  ? (_openBlock(), _createElementBlock("button", {
+                      key: 1,
                       type: "button",
                       "aria-label": _ctx.active.maximized ? _ctx.t('restoreWindow') : _ctx.t('maximiseWindow'),
                       title: _ctx.active.maximized ? _ctx.t('restoreWindow') : _ctx.t('maximiseWindow'),
@@ -1008,7 +1186,7 @@ export function render(_ctx, _cache) {
                                 }, _toDisplayString(message.errorKey ? _ctx.t(message.errorKey) : message.error), 1 /* TEXT */))
                               : _createCommentVNode("v-if", true)
                           ]),
-                          (_ctx.active.type !== 'ai' && message.mid !== undefined && (message.mine || message.fromid !== undefined || _ctx.active.type === 'friend'))
+                          (_ctx.messageQuote !== false && _ctx.active.type !== 'ai' && message.mid !== undefined && (message.mine || message.fromid !== undefined || _ctx.active.type === 'friend'))
                             ? (_openBlock(), _createElementBlock("button", {
                                 key: 0,
                                 type: "button",
@@ -1288,7 +1466,7 @@ export function render(_ctx, _cache) {
       : _createCommentVNode("v-if", true),
     (_ctx.utility)
       ? (_openBlock(), _createElementBlock("div", {
-          key: 4,
+          key: 5,
           class: "gim-modal-backdrop",
           onClick: _withModifiers($event => (!_ctx.managementBusy && (_ctx.utility = null)), ["self"])
         }, [
@@ -1305,180 +1483,440 @@ export function render(_ctx, _cache) {
                 onClick: $event => (_ctx.utility = null)
               }, "×", 8 /* PROPS */, ["aria-label", "disabled", "onClick"])
             ]),
-            (_ctx.utility === 'call-info')
+            (_ctx.utility === 'settings')
               ? (_openBlock(), _createElementBlock("div", {
                   key: 0,
-                  class: "gim-management-form gim-call-info",
-                  role: "status"
+                  class: "gim-settings"
                 }, [
-                  _createElementVNode("p", null, _toDisplayString(_ctx.t('callRequired')), 1 /* TEXT */),
-                  _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('callIntegrationHint')), 1 /* TEXT */),
-                  _createElementVNode("footer", { class: "gim-management-footer" }, [
+                  _createElementVNode("div", { class: "gim-appearance-heading" }, [
+                    _createElementVNode("strong", null, _toDisplayString(_ctx.t('skinColour')), 1 /* TEXT */),
+                    _createElementVNode("label", null, [
+                      _createTextVNode(_toDisplayString(_ctx.t('darkMode')), 1 /* TEXT */),
+                      _createElementVNode("button", {
+                        class: "gim-theme-switch",
+                        type: "button",
+                        role: "switch",
+                        "aria-label": _ctx.t('darkMode'),
+                        "aria-checked": _ctx.theme === 'dark',
+                        onClick: $event => {_ctx.theme = _ctx.theme === 'dark' ? 'light' : 'dark'; _ctx.appearanceError = ''; _ctx.saveSettings()}
+                      }, [
+                        _createElementVNode("span", { "aria-hidden": "true" })
+                      ], 8 /* PROPS */, ["aria-label", "aria-checked", "onClick"])
+                    ])
+                  ]),
+                  _createElementVNode("div", {
+                    class: "gim-skin-options",
+                    role: "group",
+                    "aria-label": _ctx.t('skinColour')
+                  }, [
+                    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.skins, (item) => {
+                      return (_openBlock(), _createElementBlock("button", {
+                        key: item.id,
+                        type: "button",
+                        "data-skin": item.id,
+                        "aria-label": _ctx.t(item.label),
+                        "aria-pressed": _ctx.skin === item.id,
+                        onClick: $event => {_ctx.skin = item.id; _ctx.appearanceError = ''; _ctx.saveSettings()}
+                      }, [
+                        _createElementVNode("span", {
+                          style: _normalizeStyle({ backgroundColor: item.color })
+                        }, [
+                          (_ctx.skin === item.id)
+                            ? (_openBlock(), _createElementBlock("svg", {
+                                key: 0,
+                                viewBox: "0 0 24 24",
+                                "aria-hidden": "true"
+                              }, [
+                                _createElementVNode("path", { d: "m6 12 4 4 8-8" })
+                              ]))
+                            : _createCommentVNode("v-if", true)
+                        ], 4 /* STYLE */),
+                        _createElementVNode("small", null, _toDisplayString(_ctx.t(item.label)), 1 /* TEXT */)
+                      ], 8 /* PROPS */, ["data-skin", "aria-label", "aria-pressed", "onClick"]))
+                    }), 128 /* KEYED_FRAGMENT */))
+                  ], 8 /* PROPS */, ["aria-label"]),
+                  _createElementVNode("div", { class: "gim-appearance-heading" }, [
+                    _createElementVNode("strong", null, _toDisplayString(_ctx.t('backgroundImage')), 1 /* TEXT */),
                     _createElementVNode("button", {
                       type: "button",
-                      "aria-label": _ctx.t('callIntegrationConfirm'),
-                      onClick: $event => (_ctx.utility = null)
-                    }, _toDisplayString(_ctx.t('callIntegrationConfirm')), 9 /* TEXT, PROPS */, ["aria-label", "onClick"])
-                  ])
-                ]))
-              : (_ctx.utility === 'add')
-                ? (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
-                    _createElementVNode("form", {
-                      class: "gim-find-form",
-                      onSubmit: _withModifiers(_ctx.runFind, ["prevent"])
-                    }, [
-                      _withDirectives(_createElementVNode("input", {
-                        "onUpdate:modelValue": $event => ((_ctx.findQuery) = $event),
-                        "aria-label": _ctx.t('findUser'),
-                        placeholder: _ctx.t('findUserPlaceholder')
-                      }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder"]), [
-                        [_vModelText, _ctx.findQuery]
-                      ]),
-                      _createElementVNode("button", { type: "submit" }, _toDisplayString(_ctx.t('find')), 1 /* TEXT */)
-                    ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]),
-                    (_ctx.findError)
-                      ? (_openBlock(), _createElementBlock("p", {
-                          key: 0,
-                          class: "gim-form-error"
-                        }, _toDisplayString(_ctx.errorText(_ctx.findError)), 1 /* TEXT */))
-                      : _createCommentVNode("v-if", true),
-                    (_ctx.findBusy)
-                      ? (_openBlock(), _createElementBlock("p", {
-                          key: 1,
-                          class: "gim-empty"
-                        }, _toDisplayString(_ctx.t('finding')), 1 /* TEXT */))
-                      : (_openBlock(), _createElementBlock("div", {
-                          key: 2,
-                          class: "gim-modal-list"
+                      class: "gim-text-action",
+                      "aria-label": _ctx.t('appearanceReset'),
+                      onClick: $event => (_ctx.resetAppearance())
+                    }, _toDisplayString(_ctx.t('appearanceReset')), 9 /* TEXT, PROPS */, ["aria-label", "onClick"])
+                  ]),
+                  _createElementVNode("div", {
+                    class: "gim-background-options",
+                    role: "group",
+                    "aria-label": _ctx.t('backgroundImage')
+                  }, [
+                    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.backgrounds, (item) => {
+                      return (_openBlock(), _createElementBlock("button", {
+                        key: item.id,
+                        type: "button",
+                        "data-background": item.id,
+                        "aria-label": _ctx.t(item.label),
+                        "aria-pressed": _ctx.background === item.id,
+                        onClick: $event => (_ctx.setBackground(item.id))
+                      }, [
+                        _createElementVNode("span", {
+                          class: _normalizeClass({ 'gim-background-none': !item.image })
                         }, [
-                          (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.findResults, (contact) => {
-                            return (_openBlock(), _createElementBlock("div", {
-                              key: `${contact.type}:${contact.id}`,
-                              class: "gim-find-row"
-                            }, [
-                              _createElementVNode("span", {
-                                class: _normalizeClass(["gim-avatar", { 'gim-group-avatar': contact.type === 'group' }])
-                              }, [
-                                (contact.type !== 'group' || contact.avatar)
-                                  ? (_openBlock(), _createElementBlock("img", {
-                                      key: 0,
-                                      src: contact.avatar || _ctx.defaultAvatar,
-                                      alt: _ctx.displayName(contact)
-                                    }, null, 8 /* PROPS */, ["src", "alt"]))
-                                  : (_openBlock(), _createElementBlock("span", { key: 1 }, _toDisplayString(_ctx.avatarLetter(contact)), 1 /* TEXT */))
-                              ], 2 /* CLASS */),
-                              _createElementVNode("span", null, [
-                                _createElementVNode("strong", null, _toDisplayString(_ctx.displayName(contact)), 1 /* TEXT */),
-                                _createElementVNode("small", null, _toDisplayString(contact.sign || (contact.type === 'group' ? _ctx.t('groups') : _ctx.t('contactId', { id: contact.id }))), 1 /* TEXT */)
-                              ]),
-                              (contact.type === 'group')
-                                ? (_openBlock(), _createElementBlock("button", {
-                                    key: 0,
-                                    type: "button",
-                                    onClick: $event => {_ctx.chat({ ...contact, type: 'group' }); _ctx.utility = null}
-                                  }, _toDisplayString(_ctx.t('chat')), 9 /* TEXT, PROPS */, ["onClick"]))
-                                : (_openBlock(), _createElementBlock("button", {
-                                    key: 1,
-                                    type: "button",
-                                    disabled: _ctx.isBlocked(contact.id) || _ctx.friends.some(item => String(item.id) === String(contact.id)) || _ctx.requestedIds.has(String(contact.id)) || _ctx.addBusy === String(contact.id),
-                                    onClick: $event => (_ctx.requestAdd(contact))
-                                  }, _toDisplayString(_ctx.isBlocked(contact.id) ? _ctx.t('blockedUser') : _ctx.friends.some(item => String(item.id) === String(contact.id)) ? _ctx.t('alreadyAdded') : _ctx.requestedIds.has(String(contact.id)) ? _ctx.t('requested') : _ctx.t('add')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]))
-                            ]))
-                          }), 128 /* KEYED_FRAGMENT */)),
-                          (!_ctx.findResults.length)
-                            ? (_openBlock(), _createElementBlock("p", {
+                          (item.image)
+                            ? (_openBlock(), _createElementBlock("img", {
                                 key: 0,
-                                class: "gim-empty"
-                              }, _toDisplayString(_ctx.findContacts ? _ctx.t('noResults') : _ctx.t('findContactsRequired')), 1 /* TEXT */))
+                                src: item.image,
+                                alt: ""
+                              }, null, 8 /* PROPS */, ["src"]))
+                            : (_openBlock(), _createElementBlock("svg", {
+                                key: 1,
+                                viewBox: "0 0 24 24",
+                                "aria-hidden": "true"
+                              }, [
+                                _createElementVNode("path", { d: "M5 5h14v14H5zM5 5l14 14" })
+                              ])),
+                          (_ctx.background === item.id)
+                            ? (_openBlock(), _createElementBlock("i", { key: 2 }, "✓"))
                             : _createCommentVNode("v-if", true)
-                        ]))
-                  ], 64 /* STABLE_FRAGMENT */))
-                : (_ctx.utility === 'friend-group' || _ctx.utility === 'accept-friend')
-                  ? (_openBlock(), _createElementBlock("form", {
-                      key: 2,
-                      class: "gim-management-form",
-                      onSubmit: _withModifiers(_ctx.submitFriendManagement, ["prevent"])
-                    }, [
-                      (_ctx.managedFriend && _ctx.utility === 'accept-friend')
-                        ? (_openBlock(), _createElementBlock("p", { key: 0 }, _toDisplayString(_ctx.t('addToCategory', { name: _ctx.displayName(_ctx.managedFriend) })), 1 /* TEXT */))
-                        : _createCommentVNode("v-if", true),
-                      (_ctx.utility !== 'friend-group' && !_ctx.creatingFriendGroup)
-                        ? (_openBlock(), _createElementBlock("label", { key: 1 }, [
-                            _createTextVNode(_toDisplayString(_ctx.t('friendCategory')), 1 /* TEXT */),
-                            _withDirectives(_createElementVNode("select", {
-                              "onUpdate:modelValue": $event => ((_ctx.selectedGroupId) = $event),
-                              "aria-label": _ctx.t('chooseCategory'),
-                              disabled: _ctx.managementBusy
-                            }, [
-                              (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.friendGroups, (group) => {
-                                return (_openBlock(), _createElementBlock("option", {
-                                  key: group.id,
-                                  value: group.id
-                                }, _toDisplayString(group.groupname), 9 /* TEXT, PROPS */, ["value"]))
-                              }), 128 /* KEYED_FRAGMENT */))
-                            ], 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "disabled"]), [
-                              [_vModelSelect, _ctx.selectedGroupId]
-                            ])
-                          ]))
-                        : _createCommentVNode("v-if", true),
-                      (_ctx.utility === 'friend-group' || _ctx.creatingFriendGroup)
-                        ? (_openBlock(), _createElementBlock("label", { key: 2 }, [
-                            _createTextVNode(_toDisplayString(_ctx.t('categoryName')), 1 /* TEXT */),
-                            _withDirectives(_createElementVNode("input", {
-                              "onUpdate:modelValue": $event => ((_ctx.newFriendGroupName) = $event),
-                              "aria-label": _ctx.t('categoryName'),
-                              placeholder: _ctx.t('categoryNamePlaceholder'),
-                              maxlength: "30",
-                              disabled: _ctx.managementBusy
-                            }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder", "disabled"]), [
-                              [_vModelText, _ctx.newFriendGroupName]
-                            ])
-                          ]))
-                        : _createCommentVNode("v-if", true),
-                      (_ctx.utility !== 'friend-group' && !_ctx.creatingFriendGroup)
-                        ? (_openBlock(), _createElementBlock("button", {
-                            key: 3,
-                            type: "button",
-                            class: "gim-text-action",
-                            disabled: _ctx.managementBusy,
-                            onClick: $event => {_ctx.creatingFriendGroup = true; _ctx.newFriendGroupName = ''}
-                          }, "＋ " + _toDisplayString(_ctx.t('newCategory')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]))
-                        : (_ctx.creatingFriendGroup && _ctx.friendGroups.length)
-                          ? (_openBlock(), _createElementBlock("button", {
-                              key: 4,
-                              type: "button",
-                              class: "gim-text-action",
-                              disabled: _ctx.managementBusy,
-                              onClick: $event => (_ctx.creatingFriendGroup = false)
-                            }, _toDisplayString(_ctx.t('chooseExistingCategory')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]))
-                          : _createCommentVNode("v-if", true),
-                      (_ctx.managementError)
-                        ? (_openBlock(), _createElementBlock("p", {
-                            key: 5,
-                            class: "gim-form-error",
-                            role: "alert"
-                          }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
-                        : _createCommentVNode("v-if", true),
-                      _createElementVNode("footer", { class: "gim-management-footer" }, [
-                        _createElementVNode("button", {
+                        ], 2 /* CLASS */),
+                        _createElementVNode("small", null, _toDisplayString(_ctx.t(item.label)), 1 /* TEXT */)
+                      ], 8 /* PROPS */, ["data-background", "aria-label", "aria-pressed", "onClick"]))
+                    }), 128 /* KEYED_FRAGMENT */)),
+                    (_ctx.customBackground)
+                      ? (_openBlock(), _createElementBlock("button", {
+                          key: 0,
                           type: "button",
-                          disabled: _ctx.managementBusy,
-                          onClick: $event => (_ctx.utility = _ctx.utility === 'accept-friend' ? 'inbox' : null)
-                        }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
-                        _createElementVNode("button", {
-                          type: "submit",
-                          disabled: _ctx.managementBusy
-                        }, _toDisplayString(_ctx.managementBusy ? _ctx.t('saving') : _ctx.utility === 'accept-friend' ? _ctx.t('acceptAndAdd') : _ctx.t('confirm')), 9 /* TEXT, PROPS */, ["disabled"])
-                      ])
-                    ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
-                  : (_ctx.utility === 'create-group' || _ctx.utility === 'invite')
+                          "data-background": "custom",
+                          "aria-label": _ctx.t('backgroundCustom'),
+                          "aria-pressed": _ctx.background === 'custom',
+                          onClick: $event => (_ctx.setBackground('custom'))
+                        }, [
+                          _createElementVNode("span", null, [
+                            _createElementVNode("img", {
+                              src: _ctx.resolveBackground(_ctx.customBackground),
+                              alt: ""
+                            }, null, 8 /* PROPS */, ["src"]),
+                            (_ctx.background === 'custom')
+                              ? (_openBlock(), _createElementBlock("i", { key: 0 }, "✓"))
+                              : _createCommentVNode("v-if", true)
+                          ]),
+                          _createElementVNode("small", null, _toDisplayString(_ctx.t('backgroundCustom')), 1 /* TEXT */)
+                        ], 8 /* PROPS */, ["aria-label", "aria-pressed", "onClick"]))
+                      : _createCommentVNode("v-if", true)
+                  ], 8 /* PROPS */, ["aria-label"]),
+                  _createElementVNode("div", { class: "gim-background-upload" }, [
+                    _createElementVNode("button", {
+                      type: "button",
+                      disabled: _ctx.backgroundBusy,
+                      onClick: $event => (_ctx.backgroundInput?.click())
+                    }, _toDisplayString(_ctx.backgroundBusy ? _ctx.t('backgroundLoading') : _ctx.t('backgroundUpload')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
+                    _createElementVNode("small", null, _toDisplayString(_ctx.t('backgroundUploadHint')), 1 /* TEXT */),
+                    _createElementVNode("input", {
+                      ref: "backgroundInput",
+                      type: "file",
+                      accept: "image/png,image/jpeg,image/gif,image/webp,image/avif",
+                      hidden: "",
+                      "aria-label": _ctx.t('backgroundChoose'),
+                      onChange: _ctx.changeBackground
+                    }, null, 40 /* PROPS, NEED_HYDRATION */, ["aria-label", "onChange"])
+                  ]),
+                  (_ctx.appearanceError)
+                    ? (_openBlock(), _createElementBlock("p", {
+                        key: 0,
+                        class: "gim-form-error",
+                        role: "alert"
+                      }, _toDisplayString(_ctx.errorText(_ctx.appearanceError)), 1 /* TEXT */))
+                    : _createCommentVNode("v-if", true),
+                  _createElementVNode("label", null, [
+                    _createTextVNode(_toDisplayString(_ctx.t('sendShortcut')), 1 /* TEXT */),
+                    _withDirectives(_createElementVNode("select", {
+                      "onUpdate:modelValue": $event => ((_ctx.sendKey) = $event),
+                      onChange: _ctx.saveSettings
+                    }, [
+                      _createElementVNode("option", { value: "enter" }, _toDisplayString(_ctx.t('enterSend')), 1 /* TEXT */),
+                      _createElementVNode("option", { value: "ctrl-enter" }, _toDisplayString(_ctx.t('ctrlSend')), 1 /* TEXT */)
+                    ], 40 /* PROPS, NEED_HYDRATION */, ["onUpdate:modelValue", "onChange"]), [
+                      [_vModelSelect, _ctx.sendKey]
+                    ])
+                  ]),
+                  _createElementVNode("button", {
+                    type: "button",
+                    class: "gim-blocklist-entry",
+                    "aria-label": _ctx.t('blocklist'),
+                    onClick: $event => (_ctx.openUtility('blocklist'))
+                  }, [
+                    _createTextVNode(_toDisplayString(_ctx.t('blocklist')), 1 /* TEXT */),
+                    _createElementVNode("span", null, _toDisplayString(_ctx.blockedUsers.length) + " ›", 1 /* TEXT */)
+                  ], 8 /* PROPS */, ["aria-label", "onClick"])
+                ]))
+              : (_ctx.utility === 'call-info')
+                ? (_openBlock(), _createElementBlock("div", {
+                    key: 1,
+                    class: "gim-management-form gim-call-info",
+                    role: "status"
+                  }, [
+                    _createElementVNode("p", null, _toDisplayString(_ctx.t('callRequired')), 1 /* TEXT */),
+                    _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('callIntegrationHint')), 1 /* TEXT */),
+                    _createElementVNode("footer", { class: "gim-management-footer" }, [
+                      _createElementVNode("button", {
+                        type: "button",
+                        "aria-label": _ctx.t('callIntegrationConfirm'),
+                        onClick: $event => (_ctx.utility = null)
+                      }, _toDisplayString(_ctx.t('callIntegrationConfirm')), 9 /* TEXT, PROPS */, ["aria-label", "onClick"])
+                    ])
+                  ]))
+                : (_ctx.utility === 'add')
+                  ? (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [
+                      _createElementVNode("form", {
+                        class: "gim-find-form",
+                        onSubmit: _withModifiers(_ctx.runFind, ["prevent"])
+                      }, [
+                        _withDirectives(_createElementVNode("input", {
+                          "onUpdate:modelValue": $event => ((_ctx.findQuery) = $event),
+                          "aria-label": _ctx.t('findUser'),
+                          placeholder: _ctx.t('findUserPlaceholder')
+                        }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder"]), [
+                          [_vModelText, _ctx.findQuery]
+                        ]),
+                        _createElementVNode("button", { type: "submit" }, _toDisplayString(_ctx.t('find')), 1 /* TEXT */)
+                      ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]),
+                      (_ctx.findError)
+                        ? (_openBlock(), _createElementBlock("p", {
+                            key: 0,
+                            class: "gim-form-error"
+                          }, _toDisplayString(_ctx.errorText(_ctx.findError)), 1 /* TEXT */))
+                        : _createCommentVNode("v-if", true),
+                      (_ctx.findBusy)
+                        ? (_openBlock(), _createElementBlock("p", {
+                            key: 1,
+                            class: "gim-empty"
+                          }, _toDisplayString(_ctx.t('finding')), 1 /* TEXT */))
+                        : (_openBlock(), _createElementBlock("div", {
+                            key: 2,
+                            class: "gim-modal-list"
+                          }, [
+                            (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.findResults, (contact) => {
+                              return (_openBlock(), _createElementBlock("div", {
+                                key: `${contact.type}:${contact.id}`,
+                                class: "gim-find-row"
+                              }, [
+                                _createElementVNode("span", {
+                                  class: _normalizeClass(["gim-avatar", { 'gim-group-avatar': contact.type === 'group' }])
+                                }, [
+                                  (contact.type !== 'group' || contact.avatar)
+                                    ? (_openBlock(), _createElementBlock("img", {
+                                        key: 0,
+                                        src: contact.avatar || _ctx.defaultAvatar,
+                                        alt: _ctx.displayName(contact)
+                                      }, null, 8 /* PROPS */, ["src", "alt"]))
+                                    : (_openBlock(), _createElementBlock("span", { key: 1 }, _toDisplayString(_ctx.avatarLetter(contact)), 1 /* TEXT */))
+                                ], 2 /* CLASS */),
+                                _createElementVNode("span", null, [
+                                  _createElementVNode("strong", null, _toDisplayString(_ctx.displayName(contact)), 1 /* TEXT */),
+                                  _createElementVNode("small", null, _toDisplayString(contact.sign || (contact.type === 'group' ? _ctx.t('groups') : _ctx.t('contactId', { id: contact.id }))), 1 /* TEXT */)
+                                ]),
+                                (contact.type === 'group')
+                                  ? (_openBlock(), _createElementBlock("button", {
+                                      key: 0,
+                                      type: "button",
+                                      onClick: $event => {_ctx.chat({ ...contact, type: 'group' }); _ctx.utility = null}
+                                    }, _toDisplayString(_ctx.t('chat')), 9 /* TEXT, PROPS */, ["onClick"]))
+                                  : (_openBlock(), _createElementBlock("button", {
+                                      key: 1,
+                                      type: "button",
+                                      disabled: _ctx.isBlocked(contact.id) || _ctx.friends.some(item => String(item.id) === String(contact.id)) || _ctx.requestedIds.has(String(contact.id)) || _ctx.addBusy === String(contact.id),
+                                      onClick: $event => (_ctx.requestAdd(contact))
+                                    }, _toDisplayString(_ctx.isBlocked(contact.id) ? _ctx.t('blockedUser') : _ctx.friends.some(item => String(item.id) === String(contact.id)) ? _ctx.t('alreadyAdded') : _ctx.requestedIds.has(String(contact.id)) ? _ctx.t('requested') : _ctx.t('add')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]))
+                              ]))
+                            }), 128 /* KEYED_FRAGMENT */)),
+                            (!_ctx.findResults.length)
+                              ? (_openBlock(), _createElementBlock("p", {
+                                  key: 0,
+                                  class: "gim-empty"
+                                }, _toDisplayString(_ctx.findContacts ? _ctx.t('noResults') : _ctx.t('findContactsRequired')), 1 /* TEXT */))
+                              : _createCommentVNode("v-if", true)
+                          ]))
+                    ], 64 /* STABLE_FRAGMENT */))
+                  : (_ctx.utility === 'friend-group' || _ctx.utility === 'accept-friend')
                     ? (_openBlock(), _createElementBlock("form", {
                         key: 3,
                         class: "gim-management-form",
-                        onSubmit: _withModifiers(_ctx.submitGroupManagement, ["prevent"])
+                        onSubmit: _withModifiers(_ctx.submitFriendManagement, ["prevent"])
                       }, [
-                        (_ctx.utility === 'create-group')
-                          ? (_openBlock(), _createElementBlock("label", { key: 0 }, [
+                        (_ctx.managedFriend && _ctx.utility === 'accept-friend')
+                          ? (_openBlock(), _createElementBlock("p", { key: 0 }, _toDisplayString(_ctx.t('addToCategory', { name: _ctx.displayName(_ctx.managedFriend) })), 1 /* TEXT */))
+                          : _createCommentVNode("v-if", true),
+                        (_ctx.utility !== 'friend-group' && !_ctx.creatingFriendGroup)
+                          ? (_openBlock(), _createElementBlock("label", { key: 1 }, [
+                              _createTextVNode(_toDisplayString(_ctx.t('friendCategory')), 1 /* TEXT */),
+                              _withDirectives(_createElementVNode("select", {
+                                "onUpdate:modelValue": $event => ((_ctx.selectedGroupId) = $event),
+                                "aria-label": _ctx.t('chooseCategory'),
+                                disabled: _ctx.managementBusy
+                              }, [
+                                (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.friendGroups, (group) => {
+                                  return (_openBlock(), _createElementBlock("option", {
+                                    key: group.id,
+                                    value: group.id
+                                  }, _toDisplayString(group.groupname), 9 /* TEXT, PROPS */, ["value"]))
+                                }), 128 /* KEYED_FRAGMENT */))
+                              ], 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "disabled"]), [
+                                [_vModelSelect, _ctx.selectedGroupId]
+                              ])
+                            ]))
+                          : _createCommentVNode("v-if", true),
+                        (_ctx.utility === 'friend-group' || _ctx.creatingFriendGroup)
+                          ? (_openBlock(), _createElementBlock("label", { key: 2 }, [
+                              _createTextVNode(_toDisplayString(_ctx.t('categoryName')), 1 /* TEXT */),
+                              _withDirectives(_createElementVNode("input", {
+                                "onUpdate:modelValue": $event => ((_ctx.newFriendGroupName) = $event),
+                                "aria-label": _ctx.t('categoryName'),
+                                placeholder: _ctx.t('categoryNamePlaceholder'),
+                                maxlength: "30",
+                                disabled: _ctx.managementBusy
+                              }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder", "disabled"]), [
+                                [_vModelText, _ctx.newFriendGroupName]
+                              ])
+                            ]))
+                          : _createCommentVNode("v-if", true),
+                        (_ctx.utility !== 'friend-group' && !_ctx.creatingFriendGroup)
+                          ? (_openBlock(), _createElementBlock("button", {
+                              key: 3,
+                              type: "button",
+                              class: "gim-text-action",
+                              disabled: _ctx.managementBusy,
+                              onClick: $event => {_ctx.creatingFriendGroup = true; _ctx.newFriendGroupName = ''}
+                            }, "＋ " + _toDisplayString(_ctx.t('newCategory')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]))
+                          : (_ctx.creatingFriendGroup && _ctx.friendGroups.length)
+                            ? (_openBlock(), _createElementBlock("button", {
+                                key: 4,
+                                type: "button",
+                                class: "gim-text-action",
+                                disabled: _ctx.managementBusy,
+                                onClick: $event => (_ctx.creatingFriendGroup = false)
+                              }, _toDisplayString(_ctx.t('chooseExistingCategory')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]))
+                            : _createCommentVNode("v-if", true),
+                        (_ctx.managementError)
+                          ? (_openBlock(), _createElementBlock("p", {
+                              key: 5,
+                              class: "gim-form-error",
+                              role: "alert"
+                            }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
+                          : _createCommentVNode("v-if", true),
+                        _createElementVNode("footer", { class: "gim-management-footer" }, [
+                          _createElementVNode("button", {
+                            type: "button",
+                            disabled: _ctx.managementBusy,
+                            onClick: $event => (_ctx.utility = _ctx.utility === 'accept-friend' ? 'inbox' : null)
+                          }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
+                          _createElementVNode("button", {
+                            type: "submit",
+                            disabled: _ctx.managementBusy
+                          }, _toDisplayString(_ctx.managementBusy ? _ctx.t('saving') : _ctx.utility === 'accept-friend' ? _ctx.t('acceptAndAdd') : _ctx.t('confirm')), 9 /* TEXT, PROPS */, ["disabled"])
+                        ])
+                      ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
+                    : (_ctx.utility === 'create-group' || _ctx.utility === 'invite')
+                      ? (_openBlock(), _createElementBlock("form", {
+                          key: 4,
+                          class: "gim-management-form",
+                          onSubmit: _withModifiers(_ctx.submitGroupManagement, ["prevent"])
+                        }, [
+                          (_ctx.utility === 'create-group')
+                            ? (_openBlock(), _createElementBlock("label", { key: 0 }, [
+                                _createTextVNode(_toDisplayString(_ctx.t('groupName')), 1 /* TEXT */),
+                                _withDirectives(_createElementVNode("input", {
+                                  "onUpdate:modelValue": $event => ((_ctx.newGroupName) = $event),
+                                  "aria-label": _ctx.t('groupName'),
+                                  placeholder: _ctx.t('groupNamePlaceholder'),
+                                  maxlength: "40",
+                                  disabled: _ctx.managementBusy
+                                }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder", "disabled"]), [
+                                  [_vModelText, _ctx.newGroupName]
+                                ])
+                              ]))
+                            : (_openBlock(), _createElementBlock("p", { key: 1 }, _toDisplayString(_ctx.t('inviteToNamedGroup', { name: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */)),
+                          _withDirectives(_createElementVNode("input", {
+                            "onUpdate:modelValue": $event => ((_ctx.memberQuery) = $event),
+                            "aria-label": _ctx.t('searchSelectableFriends'),
+                            placeholder: _ctx.t('searchFriends'),
+                            disabled: _ctx.managementBusy
+                          }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder", "disabled"]), [
+                            [_vModelText, _ctx.memberQuery]
+                          ]),
+                          (_ctx.utility === 'invite' && _ctx.groupMembersBusy[_ctx.activeKey || ''])
+                            ? (_openBlock(), _createElementBlock("p", {
+                                key: 2,
+                                class: "gim-form-hint"
+                              }, _toDisplayString(_ctx.t('loadingMembers')), 1 /* TEXT */))
+                            : (_ctx.utility === 'invite' && _ctx.groupMembersError[_ctx.activeKey || ''])
+                              ? (_openBlock(), _createElementBlock("button", {
+                                  key: 3,
+                                  class: "gim-history-error",
+                                  type: "button",
+                                  onClick: $event => (_ctx.managedGroup && _ctx.fetchGroupMembers(_ctx.managedGroup))
+                                }, _toDisplayString(_ctx.t('membersLoadFailed')), 9 /* TEXT, PROPS */, ["onClick"]))
+                              : _createCommentVNode("v-if", true),
+                          _createElementVNode("div", { class: "gim-member-options" }, [
+                            (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.selectableFriends, (friend) => {
+                              return (_openBlock(), _createElementBlock("label", {
+                                key: friend.id,
+                                class: "gim-member-option"
+                              }, [
+                                _withDirectives(_createElementVNode("input", {
+                                  "onUpdate:modelValue": $event => ((_ctx.selectedMemberIds) = $event),
+                                  type: "checkbox",
+                                  value: String(friend.id),
+                                  disabled: _ctx.managementBusy || (_ctx.utility === 'invite' && (_ctx.existingMemberIds.has(String(friend.id)) || _ctx.groupMembersBusy[_ctx.activeKey || ''] || _ctx.groupMembersError[_ctx.activeKey || '']))
+                                }, null, 8 /* PROPS */, ["onUpdate:modelValue", "value", "disabled"]), [
+                                  [_vModelCheckbox, _ctx.selectedMemberIds]
+                                ]),
+                                _createElementVNode("span", {
+                                  class: _normalizeClass(["gim-avatar", { 'gim-offline': _ctx.isOffline(friend) }])
+                                }, [
+                                  _createElementVNode("img", {
+                                    src: friend.avatar || _ctx.defaultAvatar,
+                                    alt: friend.username || ''
+                                  }, null, 8 /* PROPS */, ["src", "alt"])
+                                ], 2 /* CLASS */),
+                                _createElementVNode("span", { class: "gim-contact-copy" }, [
+                                  _createElementVNode("strong", null, _toDisplayString(_ctx.displayName(friend)), 1 /* TEXT */),
+                                  _createElementVNode("small", null, _toDisplayString(_ctx.utility === 'invite' && _ctx.existingMemberIds.has(String(friend.id)) ? _ctx.t('alreadyInGroup') : friend.sign || (_ctx.isOffline(friend) ? _ctx.t('offline') : _ctx.t('friend'))), 1 /* TEXT */)
+                                ])
+                              ]))
+                            }), 128 /* KEYED_FRAGMENT */)),
+                            (!_ctx.selectableFriends.length)
+                              ? (_openBlock(), _createElementBlock("p", {
+                                  key: 0,
+                                  class: "gim-form-hint"
+                                }, _toDisplayString(_ctx.t('noSelectableFriends')), 1 /* TEXT */))
+                              : _createCommentVNode("v-if", true)
+                          ]),
+                          _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('selectedFriends', { count: _ctx.selectedMemberIds.length })), 1 /* TEXT */),
+                          (_ctx.managementError)
+                            ? (_openBlock(), _createElementBlock("p", {
+                                key: 4,
+                                class: "gim-form-error",
+                                role: "alert"
+                              }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
+                            : _createCommentVNode("v-if", true),
+                          _createElementVNode("footer", { class: "gim-management-footer" }, [
+                            _createElementVNode("button", {
+                              type: "button",
+                              disabled: _ctx.managementBusy,
+                              onClick: $event => (_ctx.utility = null)
+                            }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
+                            _createElementVNode("button", {
+                              type: "submit",
+                              disabled: _ctx.managementBusy || (_ctx.utility === 'invite' && (_ctx.groupMembersBusy[_ctx.activeKey || ''] || _ctx.groupMembersError[_ctx.activeKey || '']))
+                            }, _toDisplayString(_ctx.managementBusy ? _ctx.t('submitting') : _ctx.utility === 'create-group' ? _ctx.t('createGroupConfirm') : _ctx.t('sendInvites')), 9 /* TEXT, PROPS */, ["disabled"])
+                          ])
+                        ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
+                      : (_ctx.utility === 'rename-group')
+                        ? (_openBlock(), _createElementBlock("form", {
+                            key: 5,
+                            class: "gim-management-form",
+                            onSubmit: _withModifiers($event => (_ctx.saveGroupProfile()), ["prevent"])
+                          }, [
+                            _createElementVNode("label", null, [
                               _createTextVNode(_toDisplayString(_ctx.t('groupName')), 1 /* TEXT */),
                               _withDirectives(_createElementVNode("input", {
                                 "onUpdate:modelValue": $event => ((_ctx.newGroupName) = $event),
@@ -1489,139 +1927,10 @@ export function render(_ctx, _cache) {
                               }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder", "disabled"]), [
                                 [_vModelText, _ctx.newGroupName]
                               ])
-                            ]))
-                          : (_openBlock(), _createElementBlock("p", { key: 1 }, _toDisplayString(_ctx.t('inviteToNamedGroup', { name: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */)),
-                        _withDirectives(_createElementVNode("input", {
-                          "onUpdate:modelValue": $event => ((_ctx.memberQuery) = $event),
-                          "aria-label": _ctx.t('searchSelectableFriends'),
-                          placeholder: _ctx.t('searchFriends'),
-                          disabled: _ctx.managementBusy
-                        }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder", "disabled"]), [
-                          [_vModelText, _ctx.memberQuery]
-                        ]),
-                        (_ctx.utility === 'invite' && _ctx.groupMembersBusy[_ctx.activeKey || ''])
-                          ? (_openBlock(), _createElementBlock("p", {
-                              key: 2,
-                              class: "gim-form-hint"
-                            }, _toDisplayString(_ctx.t('loadingMembers')), 1 /* TEXT */))
-                          : (_ctx.utility === 'invite' && _ctx.groupMembersError[_ctx.activeKey || ''])
-                            ? (_openBlock(), _createElementBlock("button", {
-                                key: 3,
-                                class: "gim-history-error",
-                                type: "button",
-                                onClick: $event => (_ctx.managedGroup && _ctx.fetchGroupMembers(_ctx.managedGroup))
-                              }, _toDisplayString(_ctx.t('membersLoadFailed')), 9 /* TEXT, PROPS */, ["onClick"]))
-                            : _createCommentVNode("v-if", true),
-                        _createElementVNode("div", { class: "gim-member-options" }, [
-                          (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.selectableFriends, (friend) => {
-                            return (_openBlock(), _createElementBlock("label", {
-                              key: friend.id,
-                              class: "gim-member-option"
-                            }, [
-                              _withDirectives(_createElementVNode("input", {
-                                "onUpdate:modelValue": $event => ((_ctx.selectedMemberIds) = $event),
-                                type: "checkbox",
-                                value: String(friend.id),
-                                disabled: _ctx.managementBusy || (_ctx.utility === 'invite' && (_ctx.existingMemberIds.has(String(friend.id)) || _ctx.groupMembersBusy[_ctx.activeKey || ''] || _ctx.groupMembersError[_ctx.activeKey || '']))
-                              }, null, 8 /* PROPS */, ["onUpdate:modelValue", "value", "disabled"]), [
-                                [_vModelCheckbox, _ctx.selectedMemberIds]
-                              ]),
-                              _createElementVNode("span", {
-                                class: _normalizeClass(["gim-avatar", { 'gim-offline': _ctx.isOffline(friend) }])
-                              }, [
-                                _createElementVNode("img", {
-                                  src: friend.avatar || _ctx.defaultAvatar,
-                                  alt: friend.username || ''
-                                }, null, 8 /* PROPS */, ["src", "alt"])
-                              ], 2 /* CLASS */),
-                              _createElementVNode("span", { class: "gim-contact-copy" }, [
-                                _createElementVNode("strong", null, _toDisplayString(_ctx.displayName(friend)), 1 /* TEXT */),
-                                _createElementVNode("small", null, _toDisplayString(_ctx.utility === 'invite' && _ctx.existingMemberIds.has(String(friend.id)) ? _ctx.t('alreadyInGroup') : friend.sign || (_ctx.isOffline(friend) ? _ctx.t('offline') : _ctx.t('friend'))), 1 /* TEXT */)
-                              ])
-                            ]))
-                          }), 128 /* KEYED_FRAGMENT */)),
-                          (!_ctx.selectableFriends.length)
-                            ? (_openBlock(), _createElementBlock("p", {
-                                key: 0,
-                                class: "gim-form-hint"
-                              }, _toDisplayString(_ctx.t('noSelectableFriends')), 1 /* TEXT */))
-                            : _createCommentVNode("v-if", true)
-                        ]),
-                        _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('selectedFriends', { count: _ctx.selectedMemberIds.length })), 1 /* TEXT */),
-                        (_ctx.managementError)
-                          ? (_openBlock(), _createElementBlock("p", {
-                              key: 4,
-                              class: "gim-form-error",
-                              role: "alert"
-                            }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
-                          : _createCommentVNode("v-if", true),
-                        _createElementVNode("footer", { class: "gim-management-footer" }, [
-                          _createElementVNode("button", {
-                            type: "button",
-                            disabled: _ctx.managementBusy,
-                            onClick: $event => (_ctx.utility = null)
-                          }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
-                          _createElementVNode("button", {
-                            type: "submit",
-                            disabled: _ctx.managementBusy || (_ctx.utility === 'invite' && (_ctx.groupMembersBusy[_ctx.activeKey || ''] || _ctx.groupMembersError[_ctx.activeKey || '']))
-                          }, _toDisplayString(_ctx.managementBusy ? _ctx.t('submitting') : _ctx.utility === 'create-group' ? _ctx.t('createGroupConfirm') : _ctx.t('sendInvites')), 9 /* TEXT, PROPS */, ["disabled"])
-                        ])
-                      ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
-                    : (_ctx.utility === 'rename-group')
-                      ? (_openBlock(), _createElementBlock("form", {
-                          key: 4,
-                          class: "gim-management-form",
-                          onSubmit: _withModifiers($event => (_ctx.saveGroupProfile()), ["prevent"])
-                        }, [
-                          _createElementVNode("label", null, [
-                            _createTextVNode(_toDisplayString(_ctx.t('groupName')), 1 /* TEXT */),
-                            _withDirectives(_createElementVNode("input", {
-                              "onUpdate:modelValue": $event => ((_ctx.newGroupName) = $event),
-                              "aria-label": _ctx.t('groupName'),
-                              placeholder: _ctx.t('groupNamePlaceholder'),
-                              maxlength: "40",
-                              disabled: _ctx.managementBusy
-                            }, null, 8 /* PROPS */, ["onUpdate:modelValue", "aria-label", "placeholder", "disabled"]), [
-                              [_vModelText, _ctx.newGroupName]
-                            ])
-                          ]),
-                          (_ctx.managementError)
-                            ? (_openBlock(), _createElementBlock("p", {
-                                key: 0,
-                                class: "gim-form-error",
-                                role: "alert"
-                              }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
-                            : _createCommentVNode("v-if", true),
-                          _createElementVNode("footer", { class: "gim-management-footer" }, [
-                            _createElementVNode("button", {
-                              type: "button",
-                              disabled: _ctx.managementBusy,
-                              onClick: $event => {_ctx.utility = 'members'; _ctx.managementError = ''}
-                            }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
-                            _createElementVNode("button", {
-                              type: "submit",
-                              disabled: _ctx.managementBusy
-                            }, _toDisplayString(_ctx.managementBusy ? _ctx.t('saving') : _ctx.t('saveGroupName')), 9 /* TEXT, PROPS */, ["disabled"])
-                          ])
-                        ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
-                      : (_ctx.utility === 'remove-member' || _ctx.utility === 'dismiss-group')
-                        ? (_openBlock(), _createElementBlock("form", {
-                            key: 5,
-                            class: "gim-management-form",
-                            onSubmit: _withModifiers($event => (_ctx.moderateGroup(_ctx.utility === 'remove-member' ? 'remove' : 'dismiss', _ctx.utility === 'remove-member' ? _ctx.managedMember || undefined : undefined)), ["prevent"])
-                          }, [
-                            (_ctx.utility === 'remove-member')
-                              ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
-                                  _createElementVNode("p", null, _toDisplayString(_ctx.t('confirmRemoveMember', { name: _ctx.managedMember ? _ctx.displayName(_ctx.managedMember) : '', group: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */),
-                                  _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('removeMemberHint')), 1 /* TEXT */)
-                                ], 64 /* STABLE_FRAGMENT */))
-                              : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
-                                  _createElementVNode("p", null, _toDisplayString(_ctx.t('confirmDismissGroup', { name: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */),
-                                  _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('dismissGroupHint')), 1 /* TEXT */)
-                                ], 64 /* STABLE_FRAGMENT */)),
+                            ]),
                             (_ctx.managementError)
                               ? (_openBlock(), _createElementBlock("p", {
-                                  key: 2,
+                                  key: 0,
                                   class: "gim-form-error",
                                   role: "alert"
                                 }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
@@ -1634,22 +1943,28 @@ export function render(_ctx, _cache) {
                               }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
                               _createElementVNode("button", {
                                 type: "submit",
-                                class: "gim-danger",
                                 disabled: _ctx.managementBusy
-                              }, _toDisplayString(_ctx.managementBusy ? _ctx.t('submitting') : _ctx.utility === 'remove-member' ? _ctx.t('confirmRemove') : _ctx.t('confirmDismiss')), 9 /* TEXT, PROPS */, ["disabled"])
+                              }, _toDisplayString(_ctx.managementBusy ? _ctx.t('saving') : _ctx.t('saveGroupName')), 9 /* TEXT, PROPS */, ["disabled"])
                             ])
                           ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
-                        : (_ctx.utility === 'leave-group')
+                        : (_ctx.utility === 'remove-member' || _ctx.utility === 'dismiss-group')
                           ? (_openBlock(), _createElementBlock("form", {
                               key: 6,
                               class: "gim-management-form",
-                              onSubmit: _withModifiers(_ctx.submitGroupManagement, ["prevent"])
+                              onSubmit: _withModifiers($event => (_ctx.moderateGroup(_ctx.utility === 'remove-member' ? 'remove' : 'dismiss', _ctx.utility === 'remove-member' ? _ctx.managedMember || undefined : undefined)), ["prevent"])
                             }, [
-                              _createElementVNode("p", null, _toDisplayString(_ctx.t('confirmLeaveGroup', { name: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */),
-                              _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('leaveGroupHint')), 1 /* TEXT */),
+                              (_ctx.utility === 'remove-member')
+                                ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
+                                    _createElementVNode("p", null, _toDisplayString(_ctx.t('confirmRemoveMember', { name: _ctx.managedMember ? _ctx.displayName(_ctx.managedMember) : '', group: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */),
+                                    _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('removeMemberHint')), 1 /* TEXT */)
+                                  ], 64 /* STABLE_FRAGMENT */))
+                                : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+                                    _createElementVNode("p", null, _toDisplayString(_ctx.t('confirmDismissGroup', { name: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */),
+                                    _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('dismissGroupHint')), 1 /* TEXT */)
+                                  ], 64 /* STABLE_FRAGMENT */)),
                               (_ctx.managementError)
                                 ? (_openBlock(), _createElementBlock("p", {
-                                    key: 0,
+                                    key: 2,
                                     class: "gim-form-error",
                                     role: "alert"
                                   }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
@@ -1658,55 +1973,43 @@ export function render(_ctx, _cache) {
                                 _createElementVNode("button", {
                                   type: "button",
                                   disabled: _ctx.managementBusy,
-                                  onClick: $event => (_ctx.utility = null)
+                                  onClick: $event => {_ctx.utility = 'members'; _ctx.managementError = ''}
                                 }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
                                 _createElementVNode("button", {
                                   type: "submit",
                                   class: "gim-danger",
                                   disabled: _ctx.managementBusy
-                                }, _toDisplayString(_ctx.managementBusy ? _ctx.t('leaving') : _ctx.t('confirmLeave')), 9 /* TEXT, PROPS */, ["disabled"])
+                                }, _toDisplayString(_ctx.managementBusy ? _ctx.t('submitting') : _ctx.utility === 'remove-member' ? _ctx.t('confirmRemove') : _ctx.t('confirmDismiss')), 9 /* TEXT, PROPS */, ["disabled"])
                               ])
                             ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
-                          : (_ctx.utility === 'settings')
-                            ? (_openBlock(), _createElementBlock("div", {
+                          : (_ctx.utility === 'leave-group')
+                            ? (_openBlock(), _createElementBlock("form", {
                                 key: 7,
-                                class: "gim-settings"
+                                class: "gim-management-form",
+                                onSubmit: _withModifiers(_ctx.submitGroupManagement, ["prevent"])
                               }, [
-                                _createElementVNode("button", {
-                                  type: "button",
-                                  class: "gim-blocklist-entry",
-                                  "aria-label": _ctx.t('blocklist'),
-                                  onClick: $event => (_ctx.openUtility('blocklist'))
-                                }, [
-                                  _createTextVNode(_toDisplayString(_ctx.t('blocklist')), 1 /* TEXT */),
-                                  _createElementVNode("span", null, _toDisplayString(_ctx.blockedUsers.length) + " ›", 1 /* TEXT */)
-                                ], 8 /* PROPS */, ["aria-label", "onClick"]),
-                                _createElementVNode("label", null, [
-                                  _createTextVNode(_toDisplayString(_ctx.t('darkMode')), 1 /* TEXT */),
+                                _createElementVNode("p", null, _toDisplayString(_ctx.t('confirmLeaveGroup', { name: _ctx.managedGroup ? _ctx.displayName(_ctx.managedGroup) : '' })), 1 /* TEXT */),
+                                _createElementVNode("p", { class: "gim-form-hint" }, _toDisplayString(_ctx.t('leaveGroupHint')), 1 /* TEXT */),
+                                (_ctx.managementError)
+                                  ? (_openBlock(), _createElementBlock("p", {
+                                      key: 0,
+                                      class: "gim-form-error",
+                                      role: "alert"
+                                    }, _toDisplayString(_ctx.errorText(_ctx.managementError)), 1 /* TEXT */))
+                                  : _createCommentVNode("v-if", true),
+                                _createElementVNode("footer", { class: "gim-management-footer" }, [
                                   _createElementVNode("button", {
-                                    class: "gim-theme-switch",
                                     type: "button",
-                                    role: "switch",
-                                    "aria-label": _ctx.t('darkMode'),
-                                    "aria-checked": _ctx.theme === 'dark',
-                                    onClick: $event => {_ctx.theme = _ctx.theme === 'dark' ? 'light' : 'dark'; _ctx.saveSettings()}
-                                  }, [
-                                    _createElementVNode("span", { "aria-hidden": "true" })
-                                  ], 8 /* PROPS */, ["aria-label", "aria-checked", "onClick"])
-                                ]),
-                                _createElementVNode("label", null, [
-                                  _createTextVNode(_toDisplayString(_ctx.t('sendShortcut')), 1 /* TEXT */),
-                                  _withDirectives(_createElementVNode("select", {
-                                    "onUpdate:modelValue": $event => ((_ctx.sendKey) = $event),
-                                    onChange: _ctx.saveSettings
-                                  }, [
-                                    _createElementVNode("option", { value: "enter" }, _toDisplayString(_ctx.t('enterSend')), 1 /* TEXT */),
-                                    _createElementVNode("option", { value: "ctrl-enter" }, _toDisplayString(_ctx.t('ctrlSend')), 1 /* TEXT */)
-                                  ], 40 /* PROPS, NEED_HYDRATION */, ["onUpdate:modelValue", "onChange"]), [
-                                    [_vModelSelect, _ctx.sendKey]
-                                  ])
+                                    disabled: _ctx.managementBusy,
+                                    onClick: $event => (_ctx.utility = null)
+                                  }, _toDisplayString(_ctx.t('cancel')), 9 /* TEXT, PROPS */, ["disabled", "onClick"]),
+                                  _createElementVNode("button", {
+                                    type: "submit",
+                                    class: "gim-danger",
+                                    disabled: _ctx.managementBusy
+                                  }, _toDisplayString(_ctx.managementBusy ? _ctx.t('leaving') : _ctx.t('confirmLeave')), 9 /* TEXT, PROPS */, ["disabled"])
                                 ])
-                              ]))
+                              ], 40 /* PROPS, NEED_HYDRATION */, ["onSubmit"]))
                             : ((_ctx.utility === 'delete-friend' || _ctx.utility === 'block-friend') && _ctx.managedFriend)
                               ? (_openBlock(), _createElementBlock("form", {
                                   key: 8,
@@ -2125,7 +2428,7 @@ export function render(_ctx, _cache) {
       : _createCommentVNode("v-if", true),
     (_ctx.previewImage)
       ? (_openBlock(), _createElementBlock("div", {
-          key: 5,
+          key: 6,
           ref: "imageViewer",
           class: "gim-image-viewer",
           role: "dialog",
@@ -2191,5 +2494,5 @@ export function render(_ctx, _cache) {
             : _createCommentVNode("v-if", true)
         ], 40 /* PROPS, NEED_HYDRATION */, ["aria-label", "onKeydown", "onClick"]))
       : _createCommentVNode("v-if", true)
-  ], 10 /* CLASS, PROPS */, ["lang"]))
+  ], 14 /* CLASS, STYLE, PROPS */, ["lang", "data-skin"]))
 }

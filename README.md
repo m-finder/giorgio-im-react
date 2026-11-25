@@ -38,6 +38,8 @@ const init: ImInit = {
 
 const im = createIM({
   init,
+  panelWidth: 360,
+  panelHeight: 680,
   onSendMessage(payload) { console.log(payload) },
 })
 
@@ -47,6 +49,8 @@ im.open()
 ```
 
 `createIM()` 只在浏览器中调用，自动挂载到 `document.body` 并注入样式。也可以传入 `target` 指定挂载元素。
+
+`panelWidth`、`panelHeight` 设置好友列表主窗口的宽高，单位为像素，默认 `316 × 630`。超出视口时自动缩小；屏幕宽度不超过 `540px` 时保持全屏。`createConnectedIM()` 将它们放在 `widget` 中，组件也可直接传入。
 
 ## React 组件
 
@@ -102,6 +106,14 @@ im.open()
 群聊个人通知设置使用 `notificationsMuted`，由 `muteGroupNotifications(group, muted)` 保存，成功后触发 `onGroupNotificationsMuted`；服务端更新可调用 `im.setGroupNotificationsMuted(groupId, muted)`。连接配套后端时自动保存，升级后先运行 `php artisan migrate`；独立使用时可开启 `enableLocalStorage` 保留设置。
 
 群聊 @ 使用 `loadGroupMembers` 或 `setGroupMembers` 提供的成员列表。`mentions` 为 `{ id, username, start, end }[]`（UTF-16 索引），`replyTo` 为 `{ mid, fromid, username, content }`，图片引用另带 `attachment` 或 `attachments`，显示缩略图及文字。连接器发送时只提交引用身份，配套后端升级后需运行 `php artisan migrate`。详见 [Vue 版消息说明](https://github.com/m-finder/giorgio-im#消息)。
+
+私聊和群聊均可引用自己或他人的消息。接收消息和历史消息需提供 `mid`，群聊还需提供发送者 `fromid`。`messageQuote` 默认 `true`；设置 `createIM({ init, messageQuote: false })` 或 `<ImWidget init={init} messageQuote={false} />` 可关闭引用入口并取消尚未发送的引用，已有引用内容仍会显示。
+
+`createConnectedIM` 已内置好友一对一 WebRTC 语音和视频通话，支持接听、拒绝、挂断、静音和计时。视频通话显示双方画面，支持独立开关摄像头。升级后端后运行 `php artisan migrate`，通过 HTTPS 或 localhost 使用摄像头和麦克风，仅在接听来电后申请权限；跨网络可在 `widget.voiceCall.iceServers` 配置 STUN/TURN。独立组件使用 `voiceCall.sendSignal` 与 `receiveCallSignal` 对接信令，视频信令需保留 `type: 'video'`；`onCall` 可覆盖内置通话。
+
+可通过“设置”切换六种配色、四张背景、上传本地背景或恢复默认，选择按账号保存并在刷新后恢复。`skin`、`background` 可设置初始外观，例如 `<ImWidget init={init} skin="green" background="mountains" />`。
+
+群聊工具栏支持群语音和视频通话，最多 4 人同时接通；成员可独立挂断，发起者挂断结束整场通话。升级后端后运行 `php artisan migrate`。网状 WebRTC 连接适合小规模群聊。独立使用时，通过 `loadGroupMembers` 或 `setGroupMembers` 提供群成员，并在信令中保留 `groupId`、`participants` 和 `group`。
 
 ## 开发
 
