@@ -38,6 +38,8 @@ const init: ImInit = {
 
 const im = createIM({
   init,
+  panelWidth: 360,
+  panelHeight: 680,
   onSendMessage(payload) { console.log(payload) },
 })
 im.chat({ id: 'alice', type: 'friend', username: 'Alice' })
@@ -46,6 +48,8 @@ im.open()
 ```
 
 `createIM()` runs in the browser, mounts into `document.body` and injects the widget styles. Pass `target` to select another mount element.
+
+`panelWidth` and `panelHeight` set the contacts panel dimensions in pixels, defaulting to `316 × 630`. Oversized panels fit within the viewport; screens up to `540px` wide use fullscreen. Pass these options inside `widget` for `createConnectedIM()`, or directly as component props.
 
 ## React component
 
@@ -100,6 +104,14 @@ Built-in languages are `zh-CN` and `en`. Extend them with `locales` or call `im.
 The personal group notification preference uses `notificationsMuted`. Save it through `muteGroupNotifications(group, muted)`; success triggers `onGroupNotificationsMuted`. Apply server updates with `im.setGroupNotificationsMuted(groupId, muted)`. The connected backend saves it automatically; run `php artisan migrate` after upgrading. Standalone widgets can retain it with `enableLocalStorage`.
 
 Group mentions use members supplied by `loadGroupMembers` or `setGroupMembers`. `mentions` uses `{ id, username, start, end }[]` (UTF-16 indices), and `replyTo` uses `{ mid, fromid, username, content }`, plus `attachment` or `attachments` to show quoted image thumbnails with their caption. The connector sends only the reference identity. Run `php artisan migrate` after upgrading the companion backend. See the [Vue message documentation](https://github.com/m-finder/giorgio-im/blob/main/README.en.md#messages).
+
+Private and group chats support quoting your own messages and other participants' messages. Incoming and historical messages must include `mid`; group messages also need the sender's `fromid`. `messageQuote` defaults to `true`. Set `createIM({ init, messageQuote: false })` or `<ImWidget init={init} messageQuote={false} />` to hide quoting actions and cancel an unsent quote; existing references remain visible.
+
+`createConnectedIM` includes one-to-one WebRTC voice and video calls with accept, decline, hang-up, mute and elapsed time. Video calls show both participants and let you turn the camera off independently. Run `php artisan migrate` after upgrading the backend and use HTTPS or localhost for camera and microphone access, requested only after accepting an incoming call. Configure STUN/TURN through `widget.voiceCall.iceServers`. Standalone widgets use `voiceCall.sendSignal` and `receiveCallSignal`, preserving `type: 'video'` for video signals; `onCall` overrides built-in calling.
+
+Use “Settings” to select six accent colours, four wallpapers, a local background or reset appearance. Preferences are saved per account and restored on refresh. Set initial defaults with `skin` and `background`, for example `<ImWidget init={init} skin="green" background="mountains" />`.
+
+The group chat toolbar supports group voice and video calls with up to 4 connected participants. Members can leave individually; the initiator hanging up ends the call. Run `php artisan migrate` after upgrading the backend. The WebRTC mesh suits small groups. Standalone widgets supply group members through `loadGroupMembers` or `setGroupMembers` and preserve `groupId`, `participants` and `group` in signals.
 
 ## Development
 
