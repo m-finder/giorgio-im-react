@@ -113,7 +113,9 @@ im.open()
 
 可通过“设置”切换六种配色、四张背景、上传本地背景或恢复默认，选择按账号保存并在刷新后恢复。`skin`、`background` 可设置初始外观，例如 `<ImWidget init={init} skin="green" background="mountains" />`。
 
-群聊工具栏支持群语音和视频通话，最多 4 人同时接通；成员可独立挂断，发起者挂断结束整场通话。升级后端后运行 `php artisan migrate`。网状 WebRTC 连接适合小规模群聊。独立使用时，通过 `loadGroupMembers` 或 `setGroupMembers` 提供群成员，并在信令中保留 `groupId`、`participants` 和 `group`。
+设置和通话窗口支持拖动；通话最小化时，语音显示说话人的头像和姓名，视频保留画面。
+
+群聊工具栏支持群语音和视频通话，不设固定人数上限；成员（含发起者）挂断只退出本人，退出后不足两人则结束通话。升级后端后运行 `php artisan migrate`。网状 WebRTC 连接适合小规模群聊。独立使用时，通过 `loadGroupMembers` 或 `setGroupMembers` 提供群成员，并在信令中保留 `groupId`、`participants` 和 `group`。
 
 ## 开发
 
@@ -121,7 +123,6 @@ im.open()
 npm install
 npm run dev
 npm run typecheck
-npm test
 npm run build
 ```
 
