@@ -103,8 +103,13 @@ const loadedHistory = new Set<string>()
 const messageList = ref<HTMLElement | null>(null)
 const panelElement = ref<HTMLElement | null>(null)
 const chatElement = ref<HTMLElement | null>(null)
+const callElement = ref<HTMLElement | null>(null)
+const settingsElement = ref<HTMLElement | null>(null)
 const panelPosition = ref<{ left: number; top: number } | null>(null)
 const chatPosition = ref<{ left: number; top: number } | null>(null)
+const callPosition = ref<{ left: number; top: number } | null>(null)
+const settingsPosition = ref<{ left: number; top: number } | null>(null)
+const windowPositions = { panel: panelPosition, chat: chatPosition, call: callPosition, settings: settingsPosition }
 const frontWindow = ref<'panel' | 'chat'>('chat')
 const utility = ref<Utility | null>(null)
 const managementBusy = ref(false)
@@ -154,13 +159,16 @@ const toolbarOverrides = ref<ImToolbarItem[] | null>(null)
 const toolbarBusy = reactive(new Set<string>())
 let toolbarSession = 0
 const callBusy = ref(false)
+const callMinimised = ref(false)
+let callDragMoved = false
 const callState = ref<VoiceCallState & { groupId?: ImId; participants?: ImContact[] }>({ phase: 'idle', type: 'voice', muted: false, cameraOff: false, duration: 0, playbackBlocked: false })
-const voiceCall = createVoiceCall(() => props.voiceCall, value => { callState.value = value })
+const voiceCall = createVoiceCall(() => props.voiceCall, value => { callState.value = value }, () => currentUser.value)
 const groupCall = createGroupCall(() => props.voiceCall, () => currentUser.value, value => { callState.value = value })
 const callController = computed(() => callState.value.groupId !== undefined ? groupCall : voiceCall)
 const callActive = computed(() => !['idle', 'ended'].includes(callState.value.phase))
 const callStatus = computed<ImLocaleKey>(() => callState.value.reason || ({ idle: 'voiceCall', incoming: callState.value.groupId !== undefined ? (callState.value.type === 'video' ? 'groupVideoCallIncoming' : 'groupVoiceCallIncoming') : (callState.value.type === 'video' ? 'videoCallIncoming' : 'callIncoming'), requesting: callState.value.type === 'video' ? 'requestingCamera' : 'requestingMicrophone', calling: 'callCalling', connecting: 'callConnecting', connected: 'callConnected', ended: 'callEnded' } as const)[callState.value.phase])
 const remoteCallParticipants = computed(() => (callState.value.participants || []).filter(member => String(member.id) !== String(props.init.user.id)))
+const callDisplayContact = computed(() => callMinimised.value && callState.value.type === 'voice' ? callState.value.speaker || callState.value.contact : callState.value.contact)
 const groupVideoReferences = new Map<string, (element: unknown) => void>()
 function groupVideoReference(id: ImId): (element: unknown) => void {
   const key = String(id)
@@ -184,6 +192,13 @@ function receiveCallSignal(signal: ImCallSignal): void {
 }
 function acceptCall(): void { cancelVoice(); callController.value.accept() }
 function hangupCall(): void { callController.value.hangup() }
+function toggleCallMinimised(): void {
+  stopDrag?.()
+  callMinimised.value = !callMinimised.value
+}
+function restoreMinimisedCall(): void {
+  if (callMinimised.value && !callDragMoved) toggleCallMinimised()
+}
 function setLocalVideo(element: unknown): void { callController.value.setLocalVideo(element instanceof HTMLVideoElement ? element : null) }
 function setRemoteVideo(element: unknown): void { voiceCall.setRemoteVideo(element instanceof HTMLVideoElement ? element : null) }
 const voiceSending = ref(false)
@@ -380,6 +395,18 @@ watch([activeKey, toolbarOverrides, () => props.toolbar], () => {
 watch([activeKey, chatOpen, composerRestriction], () => { cancelVoice(); voiceSending.value = false }, { flush: 'sync' })
 watch(voiceError, value => { if (value) toolbarError.value = value })
 watch(() => props.init.user.id, restoreSettings)
+watch(() => callState.value.phase, phase => {
+  if (phase === 'idle') callPosition.value = null
+  if (['idle', 'incoming', 'ended'].includes(phase)) callMinimised.value = false
+})
+watch(callMinimised, () => { void nextTick(() => {
+  if (!callPosition.value || !callElement.value) return
+  const bounds = callElement.value.getBoundingClientRect()
+  callPosition.value = {
+    left: Math.max(0, Math.min(window.innerWidth - bounds.width, callPosition.value.left)),
+    top: Math.max(0, Math.min(window.innerHeight - bounds.height, callPosition.value.top)),
+  }
+}) })
 watch(() => callState.value.contact && messageRestriction({ ...callState.value.contact, type: callState.value.groupId !== undefined ? 'group' : 'friend' }), restriction => { if (restriction && callActive.value) hangupCall() }, { flush: 'sync' })
 watch(messageAlertVersion, () => {
   messageAlertAnimation?.cancel()
@@ -655,7 +682,8 @@ function resetWindows(): void {
   stopDrag?.()
   stopFriendDrag?.()
   stopGroupSwipe?.()
-  panelPosition.value = chatPosition.value = null
+  for (const position of Object.values(windowPositions)) position.value = null
+  callMinimised.value = false
   openKeys.value = []
   activeKey.value = null
   draft.value = ''
@@ -669,11 +697,11 @@ function resetWindows(): void {
   saveBackup()
 }
 
-function windowStyle(which: 'panel' | 'chat'): Record<string, string | number> {
-  const position = which === 'panel' ? panelPosition.value : chatPosition.value
+function windowStyle(which: keyof typeof windowPositions): Record<string, string | number> {
+  const position = windowPositions[which].value
   return {
-    zIndex: frontWindow.value === which ? 10002 : 10001,
-    ...(position ? { left: `${position.left}px`, top: `${position.top}px`, right: 'auto', bottom: 'auto', transform: 'none' } : {}),
+    ...(which === 'panel' || which === 'chat' ? { zIndex: frontWindow.value === which ? 10002 : 10001 } : {}),
+    ...(position ? { position: 'fixed', left: `${position.left}px`, top: `${position.top}px`, right: 'auto', bottom: 'auto', transform: 'none' } : {}),
   }
 }
 
@@ -688,33 +716,42 @@ function adjustDraggedChatWidth(oldWidth?: number): void {
   })
 }
 
-function startDrag(event: PointerEvent, which: 'panel' | 'chat'): void {
+function startDrag(event: PointerEvent, which: keyof typeof windowPositions): void {
   if (which === 'chat' && active.value?.type === 'ai' && active.value.maximized) return
-  if (event.button !== 0 || window.innerWidth <= 540 || (event.target as HTMLElement).closest('button, input, select, textarea')) return
-  const element = which === 'panel' ? panelElement.value : chatElement.value
+  if (window.innerWidth <= 540 && (which === 'panel' || which === 'chat')) return
+  if (event.button !== 0 || (event.target as HTMLElement).closest('button, input, select, textarea')) return
+  const elementReference = { panel: panelElement, chat: chatElement, call: callElement, settings: settingsElement }[which]
+  const element = elementReference.value
   if (!element) return
   event.preventDefault()
-  frontWindow.value = which
+  if (which === 'call') callDragMoved = false
+  if (which === 'panel' || which === 'chat') frontWindow.value = which
   stopDrag?.()
   const bounds = element.getBoundingClientRect()
   const originX = event.clientX
   const originY = event.clientY
   const move = (next: PointerEvent) => {
-    const position = {
+    if (next.pointerId !== event.pointerId) return
+    if (element !== elementReference.value || (which === 'settings' && utility.value !== 'settings')) { stop(); return }
+    if (which === 'call' && Math.hypot(next.clientX - originX, next.clientY - originY) > 4) callDragMoved = true
+    windowPositions[which].value = {
       left: Math.max(0, Math.min(window.innerWidth - bounds.width, bounds.left + next.clientX - originX)),
       top: Math.max(0, Math.min(window.innerHeight - bounds.height, bounds.top + next.clientY - originY)),
     }
-    if (which === 'panel') panelPosition.value = position
-    else chatPosition.value = position
   }
   const stop = () => {
     window.removeEventListener('pointermove', move)
-    window.removeEventListener('pointerup', stop)
+    window.removeEventListener('pointerup', end)
+    window.removeEventListener('pointercancel', end)
+    window.removeEventListener('blur', stop)
     stopDrag = null
   }
+  const end = (next: PointerEvent) => { if (next.pointerId === event.pointerId) stop() }
   stopDrag = stop
   window.addEventListener('pointermove', move)
-  window.addEventListener('pointerup', stop)
+  window.addEventListener('pointerup', end)
+  window.addEventListener('pointercancel', end)
+  window.addEventListener('blur', stop)
 }
 
 function addContacts(contact: ChatContact, groupId?: ImId): void {
@@ -941,6 +978,7 @@ function getNotice(notice: ImNotice): void {
 
 function openUtility(mode: Utility): void {
   if (managementBusy.value) return
+  if (mode === 'settings') settingsPosition.value = null
   utility.value = mode
   managementError.value = ''
   findError.value = ''
@@ -2047,6 +2085,6 @@ function timeLabel(timestamp: number): string {
 
   return {
     api: { receiveCallSignal, setContacts, setUser, updateContact, setGroupMembers, chat, getMessage, getChatNotice, setMessageRead, setTyping, addContacts, addFriendGroup, moveFriend, removeFriend, deleteFriend, blockFriend, unblockFriend, setFriendBlocked, setBlockedUsers, getBlockedUsers, removeGroup, setGroupMute, setGroupNotificationsMuted, setGroupAdmin, getNotice, setFriendStatus, setChatStatus, setToolbar, open, close, resetWindows, setLocale },
-    context: { skins, backgrounds, resolveBackground, props, locale, t, setLocale, errorText, timeFormatter, voiceState, voiceDuration, voicePreview, voiceFile, voiceError, startVoice, stopVoice, cancelVoice, defaultAvatar, aiAvatar, messageParts, quoteImages, quoteText, panelOpen, chatOpen, pageVisible, playMessageSound, messageAlert, messageAlertVersion, messageAlertAnimation, tab, search, searchOpen, searchInput, collapsedGroups, draggedFriend, friendDropTarget, friendMoveBusy, friendMoveError, friendDragClick, friendActionsId, friendSwipe, groupActionsId, groupSwipe, groupSwipeClick, groupNotificationBusy, groupNotificationError, blockedUsers, draft, previousDraft, composerInput, draftMentions, mentionQuery, mentionIndex, replyTo, pendingImages, imageSending, imagePreviewUrl, imageViewer, imagePreviewTrigger, sign, savedSign, username, usernameDraft, userAvatar, avatarInput, avatarBusy, avatarError, avatarRequest, online, currentUser, activeKey, openKeys, recentKeys, conversations, messages, aiPending, aiTimers, markdown, unread, friendStatus, chatStatus, readReceipts, readNotified, typingStates, typingTimers, localTyping, typingIdleTimer, lastTypingSentAt, historyError, loadedHistory, messageList, panelElement, chatElement, panelPosition, chatPosition, frontWindow, utility, managementBusy, managementError, newFriendGroupName, creatingFriendGroup, selectedGroupId, managedFriend, pendingNotice, managedGroup, managedMember, newGroupName, groupAvatarInput, memberQuery, selectedMemberIds, groupMembers, groupMuteStates, groupMemberMuteStates, groupMembersBusy, groupMembersError, findQuery, findResults, findBusy, findError, addBusy, requestedIds, notices, theme, skin, background, customBackground, backgroundInput, backgroundBusy, appearanceError, backgroundRequest, backgroundImage, widgetStyle, sendKey, emojiOpen, toolbarError, toolbarOverrides, toolbarBusy, toolbarSession, callBusy, callState, voiceCall, groupCall, callController, callActive, callStatus, remoteCallParticipants, groupVideoReferences, groupVideoReference, receiveCallSignal, acceptCall, hangupCall, setLocalVideo, setRemoteVideo, voiceSending, imageInput, fileInput, emojis, stopDrag, stopFriendDrag, stopGroupSwipe, localBackup, backupUserId, backupMounted, disposed, keyOf, contactSnapshot, friends, addedGroups, removedFriendIds, removedGroupIds, groupMemberCounts, groupProfiles, groups, active, composerRestriction, toolbarState, toolbarItems, activeMessages, imageGallery, previewImageIndex, previewImage, mentionCandidates, typingLabel, totalUnread, unreadContacts, notificationUnread, unreadNotices, addedFriends, addedFriendGroups, friendGroupAssignments, friendGroups, utilityTitle, selectableFriends, existingMemberIds, managedGroupKey, query, visibleGroups, visibleChats, visibleRecent, backupSnapshot, saveBackup, configureBackup, displayName, avatarLetter, isOffline, toggleSearch, toggleGroup, scrollToBottom, normalise, remember, ensureConversation, fetchHistory, chat, updatePageVisibility, isConversationVisible, isConversationOpen, mentionsCurrentUser, unreadMentions, alertUnreadCount, shouldAlert, markUnread, openUnreadMessages, open, close, resetWindows, windowStyle, adjustDraggedChatWidth, startDrag, addContacts, addFriendGroup, setUser, setContacts, updateContact, setGroupMembers, moveFriend, removeConversation, removeFriend, isBlocked, isBlockedContact, isBlockedMessage, getBlockedUsers, setFriendBlocked, setBlockedUsers, changeFriend, deleteFriend, blockFriend, unblockFriend, confirmFriendAction, submitFriendAction, removeGroup, getNotice, openUtility, fetchGroupMembers, updateMemberCount, groupInfo, applyGroupProfile, isGroupNotificationsMuted, setGroupNotificationsMuted, toggleGroupNotifications, startGroupSwipe, saveGroupProfile, isGroupOwner, isGroupAdmin, canManageGroup, canManageMember, setGroupAdmin, assertGroupManagement, isGroupMuted, isMemberMuted, setGroupMute, messageRestriction, moderateGroup, startFriendDrag, dropFriend, saveFriendGroup, submitFriendManagement, submitGroupManagement, runFind, requestAdd, actOnNotice, restoreSettings, saveSettings, setBackground, resetAppearance, changeBackground, closeChat, getMessage, finishAIReply, waitForAI, startAIReply, receiveAIMessage, getChatNotice, chatNoticeText, setMessageRead, markViewedMessages, setTyping, publishTyping, stopTyping, setFriendStatus, setChatStatus, send, updateMentionQuery, selectMention, quoteMessage, onComposerKeydown, insertEmoji, setToolbar, runToolbar, safeAttachmentUrl, openImagePreview, closeImagePreview, moveImagePreview, onImagePreviewKeydown, clearPendingImages, removePendingImage, onComposerImage, sendAttachment, requestCall, sendVoice, updateOnline, updateSign, updateUsername, readAvatar, updateAvatar, timeLabel },
+    context: { skins, backgrounds, resolveBackground, props, locale, t, setLocale, errorText, timeFormatter, voiceState, voiceDuration, voicePreview, voiceFile, voiceError, startVoice, stopVoice, cancelVoice, defaultAvatar, aiAvatar, messageParts, quoteImages, quoteText, panelOpen, chatOpen, pageVisible, playMessageSound, messageAlert, messageAlertVersion, messageAlertAnimation, tab, search, searchOpen, searchInput, collapsedGroups, draggedFriend, friendDropTarget, friendMoveBusy, friendMoveError, friendDragClick, friendActionsId, friendSwipe, groupActionsId, groupSwipe, groupSwipeClick, groupNotificationBusy, groupNotificationError, blockedUsers, draft, previousDraft, composerInput, draftMentions, mentionQuery, mentionIndex, replyTo, pendingImages, imageSending, imagePreviewUrl, imageViewer, imagePreviewTrigger, sign, savedSign, username, usernameDraft, userAvatar, avatarInput, avatarBusy, avatarError, avatarRequest, online, currentUser, activeKey, openKeys, recentKeys, conversations, messages, aiPending, aiTimers, markdown, unread, friendStatus, chatStatus, readReceipts, readNotified, typingStates, typingTimers, localTyping, typingIdleTimer, lastTypingSentAt, historyError, loadedHistory, messageList, panelElement, chatElement, callElement, settingsElement, panelPosition, chatPosition, callPosition, settingsPosition, windowPositions, frontWindow, utility, managementBusy, managementError, newFriendGroupName, creatingFriendGroup, selectedGroupId, managedFriend, pendingNotice, managedGroup, managedMember, newGroupName, groupAvatarInput, memberQuery, selectedMemberIds, groupMembers, groupMuteStates, groupMemberMuteStates, groupMembersBusy, groupMembersError, findQuery, findResults, findBusy, findError, addBusy, requestedIds, notices, theme, skin, background, customBackground, backgroundInput, backgroundBusy, appearanceError, backgroundRequest, backgroundImage, widgetStyle, sendKey, emojiOpen, toolbarError, toolbarOverrides, toolbarBusy, toolbarSession, callBusy, callMinimised, callDragMoved, callState, voiceCall, groupCall, callController, callActive, callStatus, remoteCallParticipants, callDisplayContact, groupVideoReferences, groupVideoReference, receiveCallSignal, acceptCall, hangupCall, toggleCallMinimised, restoreMinimisedCall, setLocalVideo, setRemoteVideo, voiceSending, imageInput, fileInput, emojis, stopDrag, stopFriendDrag, stopGroupSwipe, localBackup, backupUserId, backupMounted, disposed, keyOf, contactSnapshot, friends, addedGroups, removedFriendIds, removedGroupIds, groupMemberCounts, groupProfiles, groups, active, composerRestriction, toolbarState, toolbarItems, activeMessages, imageGallery, previewImageIndex, previewImage, mentionCandidates, typingLabel, totalUnread, unreadContacts, notificationUnread, unreadNotices, addedFriends, addedFriendGroups, friendGroupAssignments, friendGroups, utilityTitle, selectableFriends, existingMemberIds, managedGroupKey, query, visibleGroups, visibleChats, visibleRecent, backupSnapshot, saveBackup, configureBackup, displayName, avatarLetter, isOffline, toggleSearch, toggleGroup, scrollToBottom, normalise, remember, ensureConversation, fetchHistory, chat, updatePageVisibility, isConversationVisible, isConversationOpen, mentionsCurrentUser, unreadMentions, alertUnreadCount, shouldAlert, markUnread, openUnreadMessages, open, close, resetWindows, windowStyle, adjustDraggedChatWidth, startDrag, addContacts, addFriendGroup, setUser, setContacts, updateContact, setGroupMembers, moveFriend, removeConversation, removeFriend, isBlocked, isBlockedContact, isBlockedMessage, getBlockedUsers, setFriendBlocked, setBlockedUsers, changeFriend, deleteFriend, blockFriend, unblockFriend, confirmFriendAction, submitFriendAction, removeGroup, getNotice, openUtility, fetchGroupMembers, updateMemberCount, groupInfo, applyGroupProfile, isGroupNotificationsMuted, setGroupNotificationsMuted, toggleGroupNotifications, startGroupSwipe, saveGroupProfile, isGroupOwner, isGroupAdmin, canManageGroup, canManageMember, setGroupAdmin, assertGroupManagement, isGroupMuted, isMemberMuted, setGroupMute, messageRestriction, moderateGroup, startFriendDrag, dropFriend, saveFriendGroup, submitFriendManagement, submitGroupManagement, runFind, requestAdd, actOnNotice, restoreSettings, saveSettings, setBackground, resetAppearance, changeBackground, closeChat, getMessage, finishAIReply, waitForAI, startAIReply, receiveAIMessage, getChatNotice, chatNoticeText, setMessageRead, markViewedMessages, setTyping, publishTyping, stopTyping, setFriendStatus, setChatStatus, send, updateMentionQuery, selectMention, quoteMessage, onComposerKeydown, insertEmoji, setToolbar, runToolbar, safeAttachmentUrl, openImagePreview, closeImagePreview, moveImagePreview, onImagePreviewKeydown, clearPendingImages, removePendingImage, onComposerImage, sendAttachment, requestCall, sendVoice, updateOnline, updateSign, updateUsername, readAvatar, updateAvatar, timeLabel },
   }
 }

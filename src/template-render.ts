@@ -1,6 +1,6 @@
 // @ts-nocheck
 // React elements generated from the matching Giorgio IM view.
-import { createElementVNode as _createElementVNode, toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, createTextVNode as _createTextVNode, renderList as _renderList, Fragment as _Fragment, normalizeClass as _normalizeClass, vModelText as _vModelText, withKeys as _withKeys, withDirectives as _withDirectives, withModifiers as _withModifiers, normalizeStyle as _normalizeStyle, vModelSelect as _vModelSelect, vModelCheckbox as _vModelCheckbox } from "./react-template"
+import { openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, withModifiers as _withModifiers, createElementVNode as _createElementVNode, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, renderList as _renderList, Fragment as _Fragment, normalizeClass as _normalizeClass, normalizeStyle as _normalizeStyle, vModelText as _vModelText, withKeys as _withKeys, withDirectives as _withDirectives, vModelSelect as _vModelSelect, vModelCheckbox as _vModelCheckbox } from "./react-template"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", {
@@ -12,27 +12,62 @@ export function render(_ctx, _cache) {
     (_ctx.callState.phase !== 'idle')
       ? (_openBlock(), _createElementBlock("section", {
           key: 0,
-          class: _normalizeClass(["gim-call", { 'gim-call-video': _ctx.callState.type === 'video' }]),
+          ref: "callElement",
+          class: _normalizeClass(["gim-call", { 'gim-call-video': _ctx.callState.type === 'video', 'gim-call-minimised': _ctx.callMinimised, 'gim-drag-handle': _ctx.callMinimised }]),
+          style: _normalizeStyle(_ctx.windowStyle('call')),
           role: "dialog",
-          "aria-label": _ctx.t(_ctx.callState.type === 'video' ? 'videoCall' : 'voiceCall')
+          "aria-label": _ctx.t(_ctx.callState.type === 'video' ? 'videoCall' : 'voiceCall'),
+          onPointerdown: $event => (_ctx.callMinimised && _ctx.startDrag($event, 'call')),
+          onClick: _ctx.restoreMinimisedCall
         }, [
-          _createElementVNode("img", {
-            src: _ctx.callState.contact?.avatar || _ctx.defaultAvatar,
-            alt: ""
-          }, null, 8 /* PROPS */, ["src"]),
-          _createElementVNode("strong", null, _toDisplayString(_ctx.callState.contact?.groupname || _ctx.callState.contact?.username || _ctx.t(_ctx.callState.type === 'video' ? 'videoCall' : 'voiceCall')), 1 /* TEXT */),
-          _createElementVNode("p", {
-            role: "status",
-            "aria-live": "polite"
+          (['calling', 'connecting', 'connected'].includes(_ctx.callState.phase))
+            ? (_openBlock(), _createElementBlock("button", {
+                key: 0,
+                type: "button",
+                class: "gim-call-window-control",
+                "aria-label": _ctx.t(_ctx.callMinimised ? 'callRestore' : 'callMinimise'),
+                title: _ctx.t(_ctx.callMinimised ? 'callRestore' : 'callMinimise'),
+                onClick: _withModifiers(_ctx.toggleCallMinimised, ["stop"])
+              }, [
+                (_openBlock(), _createElementBlock("svg", {
+                  viewBox: "0 0 24 24",
+                  "aria-hidden": "true"
+                }, [
+                  (_ctx.callMinimised)
+                    ? (_openBlock(), _createElementBlock("path", {
+                        key: 0,
+                        d: "M8 8V4h12v12h-4M4 8h12v12H4Z"
+                      }))
+                    : (_openBlock(), _createElementBlock("path", {
+                        key: 1,
+                        d: "M5 16h14"
+                      }))
+                ]))
+              ], 8 /* PROPS */, ["aria-label", "title", "onClick"]))
+            : _createCommentVNode("v-if", true),
+          _createElementVNode("header", {
+            class: "gim-call-header gim-drag-handle",
+            onPointerdown: $event => (!_ctx.callMinimised && _ctx.startDrag($event, 'call'))
           }, [
-            _createTextVNode(_toDisplayString(_ctx.t(_ctx.callStatus)), 1 /* TEXT */),
-            (_ctx.callState.phase === 'connected')
-              ? (_openBlock(), _createElementBlock("span", { key: 0 }, " · " + _toDisplayString(Math.floor(_ctx.callState.duration / 60).toString().padStart(2, '0')) + ":" + _toDisplayString((_ctx.callState.duration % 60).toString().padStart(2, '0')), 1 /* TEXT */))
-              : _createCommentVNode("v-if", true)
-          ]),
+            _createElementVNode("img", {
+              src: _ctx.callDisplayContact?.avatar || _ctx.defaultAvatar,
+              alt: "",
+              draggable: "false"
+            }, null, 8 /* PROPS */, ["src"]),
+            _createElementVNode("strong", null, _toDisplayString(_ctx.callDisplayContact?.groupname || _ctx.callDisplayContact?.username || _ctx.t(_ctx.callState.type === 'video' ? 'videoCall' : 'voiceCall')), 1 /* TEXT */),
+            _createElementVNode("p", {
+              role: "status",
+              "aria-live": "polite"
+            }, [
+              _createTextVNode(_toDisplayString(_ctx.t(_ctx.callStatus)), 1 /* TEXT */),
+              (_ctx.callState.phase === 'connected')
+                ? (_openBlock(), _createElementBlock("span", { key: 0 }, " · " + _toDisplayString(Math.floor(_ctx.callState.duration / 60).toString().padStart(2, '0')) + ":" + _toDisplayString((_ctx.callState.duration % 60).toString().padStart(2, '0')), 1 /* TEXT */))
+                : _createCommentVNode("v-if", true)
+            ])
+          ], 40 /* PROPS, NEED_HYDRATION */, ["onPointerdown"]),
           (_ctx.callState.groupId !== undefined && _ctx.callActive && _ctx.callState.phase !== 'incoming')
             ? (_openBlock(), _createElementBlock("div", {
-                key: 0,
+                key: 1,
                 class: _normalizeClass(["gim-call-participants", { 'gim-call-participants-video': _ctx.callState.type === 'video' }])
               }, [
                 (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.remoteCallParticipants, (member) => {
@@ -84,7 +119,7 @@ export function render(_ctx, _cache) {
               ], 2 /* CLASS */))
             : (_ctx.callState.type === 'video' && _ctx.callActive && _ctx.callState.phase !== 'incoming')
               ? (_openBlock(), _createElementBlock("div", {
-                  key: 1,
+                  key: 2,
                   class: "gim-call-videos"
                 }, [
                   _createElementVNode("video", {
@@ -162,7 +197,7 @@ export function render(_ctx, _cache) {
                   onClick: _ctx.callController.dismiss
                 }, _toDisplayString(_ctx.t('callClose')), 9 /* TEXT, PROPS */, ["onClick"]))
           ])
-        ], 10 /* CLASS, PROPS */, ["aria-label"]))
+        ], 46 /* CLASS, STYLE, PROPS, NEED_HYDRATION */, ["aria-label", "onPointerdown", "onClick"]))
       : _createCommentVNode("v-if", true),
     (_ctx.customerService ? !_ctx.chatOpen : !_ctx.panelOpen)
       ? (_openBlock(), _createElementBlock("button", {
@@ -1471,10 +1506,15 @@ export function render(_ctx, _cache) {
           onClick: _withModifiers($event => (!_ctx.managementBusy && (_ctx.utility = null)), ["self"])
         }, [
           _createElementVNode("section", {
+            ref: "settingsElement",
             class: "gim-modal",
+            style: _normalizeStyle(_ctx.utility === 'settings' ? _ctx.windowStyle('settings') : undefined),
             "aria-label": _ctx.utilityTitle
           }, [
-            _createElementVNode("header", null, [
+            _createElementVNode("header", {
+              class: _normalizeClass({ 'gim-drag-handle': _ctx.utility === 'settings' }),
+              onPointerdown: $event => (_ctx.utility === 'settings' && _ctx.startDrag($event, 'settings'))
+            }, [
               _createElementVNode("strong", null, _toDisplayString(_ctx.utilityTitle), 1 /* TEXT */),
               _createElementVNode("button", {
                 type: "button",
@@ -1482,7 +1522,7 @@ export function render(_ctx, _cache) {
                 disabled: _ctx.managementBusy,
                 onClick: $event => (_ctx.utility = null)
               }, "×", 8 /* PROPS */, ["aria-label", "disabled", "onClick"])
-            ]),
+            ], 42 /* CLASS, PROPS, NEED_HYDRATION */, ["onPointerdown"]),
             (_ctx.utility === 'settings')
               ? (_openBlock(), _createElementBlock("div", {
                   key: 0,
@@ -2423,7 +2463,7 @@ export function render(_ctx, _cache) {
                                             }, _toDisplayString(_ctx.t('noHistory')), 1 /* TEXT */))
                                           : _createCommentVNode("v-if", true)
                                       ]))
-          ], 8 /* PROPS */, ["aria-label"])
+          ], 12 /* STYLE, PROPS */, ["aria-label"])
         ], 8 /* PROPS */, ["onClick"]))
       : _createCommentVNode("v-if", true),
     (_ctx.previewImage)

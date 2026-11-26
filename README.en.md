@@ -111,7 +111,9 @@ Private and group chats support quoting your own messages and other participants
 
 Use “Settings” to select six accent colours, four wallpapers, a local background or reset appearance. Preferences are saved per account and restored on refresh. Set initial defaults with `skin` and `background`, for example `<ImWidget init={init} skin="green" background="mountains" />`.
 
-The group chat toolbar supports group voice and video calls with up to 4 connected participants. Members can leave individually; the initiator hanging up ends the call. Run `php artisan migrate` after upgrading the backend. The WebRTC mesh suits small groups. Standalone widgets supply group members through `loadGroupMembers` or `setGroupMembers` and preserve `groupId`, `participants` and `group` in signals.
+Settings and call windows can be dragged. Minimised voice calls show the speaker’s avatar and name; minimised video calls show the video.
+
+The group chat toolbar supports group voice and video calls without a fixed participant limit. Anyone can leave; the call ends when a joined member leaves and fewer than two remain. Run `php artisan migrate` after upgrading the backend. The WebRTC mesh suits small groups. Standalone widgets supply group members through `loadGroupMembers` or `setGroupMembers` and preserve `groupId`, `participants` and `group` in signals.
 
 ## Development
 
@@ -119,7 +121,6 @@ The group chat toolbar supports group voice and video calls with up to 4 connect
 npm install
 npm run dev
 npm run typecheck
-npm test
 npm run build
 ```
 
